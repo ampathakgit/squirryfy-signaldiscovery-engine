@@ -1,0 +1,49 @@
+name: Squirryfy Infrastructure (Terraform)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  terraform:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        env:
+          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN }}
+        run: terraform apply -auto-approve
+
+      - name: Sync Terraform Outputs to GitHub Secrets
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::GH_PAT secret is not set. Skipping automatic secrets synchronization."
+            echo "Please manually copy the following Terraform outputs to your repository secrets:"
+            echo "SERVER_IP: $(terraform output -raw server_ip)"
+            exit 0
+          fi
+
+          echo "Extracting Terraform outputs..."
+          SERVER_IP=$(terraform output -raw server_ip)
+          PUBLIC_KEY=$(terraform output -raw public_key)
+          PRIVATE_KEY=$(terraform output -raw private_key)
+
+          echo "Synchronizing secrets using GitHub CLI..."
+          echo "$SERVER_IP" | gh secret set SERVER_IP
+          echo "$PUBLIC_KEY" | gh secret set SSH_PUBLIC_KEY
+          echo "$PRIVATE_KEY" | gh secret set SSH_PRIVATE_KEY
+          
+          echo "✅ Secrets successfully synchronized: SERVER_IP, SSH_PUBLIC_KEY, SSH_PRIVATE_KEY"

@@ -1,0 +1,95 @@
+name: Squirryfy Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      target_server_ip:
+        description: 'Target Server IP (optional override)'
+        required: false
+        type: string
+
+jobs:
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/squirryfy-signaldiscovery-engine:latest
+            ghcr.io/${{ github.repository_owner }}/squirryfy-signaldiscovery-engine:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Server
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH Private Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: Run Deploy Script on Target Server
+        env:
+          SERVER_IP: ${{ inputs.target_server_ip || secrets.SERVER_IP }}
+          REPO_OWNER: ${{ github.repository_owner }}
+        run: |
+          if [ -z "$SERVER_IP" ]; then
+            echo "::error::Target SERVER_IP is not set. Please run the Terraform workflow or define secrets.SERVER_IP."
+            exit 1
+          fi
+
+          echo "Deploying to server: $SERVER_IP..."
+          
+          # Connect via SSH, pull latest image, stop and remove old container, and start new one
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@$SERVER_IP "
+            echo 'Logging in to GHCR on server...' && \
+            docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} && \
+            echo 'Pulling latest image...' && \
+            docker pull ghcr.io/${REPO_OWNER}/squirryfy-signaldiscovery-engine:latest && \
+            echo 'Stopping existing container...' && \
+            docker stop squirryfy || true && \
+            docker rm squirryfy || true && \
+            echo 'Running new container...' && \
+            docker run -d \
+              --name squirryfy \
+              --restart unless-stopped \
+              -p 127.0.0.1:3000:3000 \
+              --env-file /etc/squirryfy.env \
+              ghcr.io/${REPO_OWNER}/squirryfy-signaldiscovery-engine:latest && \
+            echo 'Pruning unused docker elements...' && \
+            docker image prune -f && \
+            echo '✅ Deployment completed successfully!'
+          "

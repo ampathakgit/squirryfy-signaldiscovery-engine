@@ -1,0 +1,209 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [pgvector]
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+enum SourceType {
+  ARTICLE
+  VIDEO
+  SOCIAL
+  TREND
+  FORUM
+  OFFICIAL
+  RSS
+}
+
+enum RunStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model Region {
+  id                    String                 @id // e.g. "us", "india", "europe"
+  name                  String
+  timezone              String                 // e.g. "America/New_York"
+  languages             String[]               // e.g. ["en"]
+  enabled               Boolean                @default(true)
+  categoryRegionConfigs CategoryRegionConfig[]
+  sourceWeightConfigs   SourceWeightConfig[]
+  rawSignals            RawSignal[]
+  finalSignals          FinalSignal[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+}
+
+model Category {
+  id                    String                 @id // e.g. "ai_tech", "markets_innovation"
+  name                  String
+  enabled               Boolean                @default(true)
+  defaultTopN           Int                    @default(3)
+  categoryRegionConfigs CategoryRegionConfig[]
+  sourceWeightConfigs   SourceWeightConfig[]
+  rawSignals            RawSignal[]
+  finalSignals          FinalSignal[]
+  scoringRules          ScoringRule[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+}
+
+model Source {
+  id          String      @id // e.g. "hacker_news", "reddit", "youtube"
+  name        String
+  type        SourceType
+  enabled     Boolean     @default(true)
+  rawSignals  RawSignal[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model CategoryRegionConfig {
+  regionId        String
+  categoryId      String
+  keywords        String[]
+  excludeKeywords String[]
+  topN            Int      @default(3)
+  timeWindowHours Int      @default(24)
+  region          Region   @relation(fields: [regionId], references: [id], onDelete: Cascade)
+  category        Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@id([regionId, categoryId])
+}
+
+model SourceWeightConfig {
+  regionId   String
+  categoryId String
+  weights    Json     // e.g. { "hacker_news": 0.25, "youtube": 0.20, ... }
+  region     Region   @relation(fields: [regionId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@id([regionId, categoryId])
+}
+
+model RawSignal {
+  id          String                 @id @default(uuid())
+  regionId    String
+  categoryId  String
+  sourceId    String
+  sourceType  SourceType
+  title       String
+  url         String
+  author      String?
+  publishedAt DateTime?
+  rawText     String?
+  summary     String?
+  engagement  Json?                  // e.g. { views, likes, comments, upvotes }
+  metadata    Json?                  // Source-specific metadata
+  normalized  Boolean                @default(false)
+  embedding   Unsupported("vector")? // Vector storage for future semantic clustering
+  
+  region      Region                 @relation(fields: [regionId], references: [id])
+  category    Category               @relation(fields: [categoryId], references: [id])
+  source      Source                 @relation(fields: [sourceId], references: [id])
+  clusterId   String?
+  cluster     SignalCluster?         @relation(fields: [clusterId], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  @@index([regionId, categoryId])
+  @@index([url])
+}
+
+model SignalCluster {
+  id          String        @id @default(uuid())
+  regionId    String
+  categoryId  String
+  title       String
+  summary     String?
+  score       Float         @default(0)
+  rawSignals  RawSignal[]
+  finalSignals FinalSignal[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model FinalSignal {
+  id                       String         @id @default(uuid())
+  signalId                 String         @unique // For Squirry tracking (e.g. "sig_001")
+  regionId                 String
+  categoryId               String
+  title                    String
+  canonicalUrl             String
+  canonicalSource          String
+  sourceType               SourceType
+  score                    Float
+  whySelected              String[]
+  supportingUrls           String[]
+  entities                 String[]
+  readyForSquirryAnalysis  Boolean        @default(true)
+  
+  region                   Region         @relation(fields: [regionId], references: [id])
+  category                 Category       @relation(fields: [categoryId], references: [id])
+  runId                    String
+  run                      DiscoveryRun   @relation(fields: [runId], references: [id], onDelete: Cascade)
+  clusterId                String?
+  cluster                  SignalCluster? @relation(fields: [clusterId], references: [id], onDelete: SetNull)
+
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
+
+  @@index([regionId, categoryId])
+}
+
+model CanonicalUrl {
+  id         String   @id @default(uuid())
+  url        String   @unique
+  sourceType String
+  isClean    Boolean  @default(true)
+  metadata   Json?
+  createdAt  DateTime @default(now())
+}
+
+model ScoringRule {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  categoryId  String?   @unique // Optional category override (Null = default rule)
+  category    Category? @relation(fields: [categoryId], references: [id])
+  weights     Json      // e.g. { attention: 0.30, velocity: 0.25, ... }
+  enabled     Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model DiscoveryRun {
+  id                          String             @id @default(uuid())
+  status                      RunStatus          @default(PENDING)
+  startedAt                   DateTime           @default(now())
+  completedAt                 DateTime?
+  signalsFoundCount           Int                @default(0)
+  signalsClusteredCount       Int                @default(0)
+  finalSignalsGeneratedCount  Int                @default(0)
+  finalSignals                FinalSignal[]
+  logs                        DiscoveryRunLog[]
+  createdAt                   DateTime           @default(now())
+}
+
+model DiscoveryRunLog {
+  id        String       @id @default(uuid())
+  runId     String
+  run       DiscoveryRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  level     String       // e.g. "INFO", "WARN", "ERROR"
+  message   String
+  details   Json?
+  createdAt DateTime     @default(now())
+}
