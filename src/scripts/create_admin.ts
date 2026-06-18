@@ -1,9 +1,4 @@
-import dotenv from 'dotenv';
-import path from 'path';
-
-// Load environment variables from the root .env
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
-
+import 'dotenv/config';
 import supabase from '../lib/db';
 import { generateSalt, hashPassword } from '../lib/auth/crypto';
 
