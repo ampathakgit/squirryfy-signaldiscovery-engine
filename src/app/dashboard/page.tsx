@@ -188,6 +188,9 @@ export default function DashboardPage() {
 
   // Run pipeline trigger
   const triggerPipeline = async () => {
+    const isConfirmed = window.confirm(`Are you sure you want to trigger a new Signal Discovery pipeline run for date context: ${filterDate}? This will scan all active regions and categories, consuming Gemini API credits.`);
+    if (!isConfirmed) return;
+
     setIsTriggering(true);
     try {
       const resp = await fetch('/api/discovery/run', {
@@ -333,48 +336,53 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            {currentUser && (
-              <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-neutral-900/60 border border-neutral-800/80 text-xs text-neutral-300">
-                <span className="font-semibold text-cyan-400">👤 {currentUser}</span>
-                <span className="text-neutral-750">|</span>
-                <button
-                  onClick={handleLogout}
-                  className="text-neutral-500 hover:text-rose-400 font-medium transition-colors cursor-pointer"
-                >
-                  Logout
-                </button>
-              </div>
-            )}
-
-            <div className="flex items-center gap-3">
+          {currentUser && (
+            <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-neutral-900/60 border border-neutral-800/80 text-xs text-neutral-300">
+              <span className="font-semibold text-cyan-400">👤 {currentUser}</span>
+              <span className="text-neutral-750">|</span>
               <button
-                onClick={fetchConfigs}
-                className="p-2.5 rounded-xl bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 transition-all text-neutral-400"
-                title="Refresh configuration data"
+                onClick={handleLogout}
+                className="text-neutral-500 hover:text-rose-400 font-medium transition-colors cursor-pointer"
               >
-                <RefreshCw className={`w-4 h-4 ${isFetchingConfig ? 'animate-spin text-cyan-400' : ''}`} />
-              </button>
-              <button
-                onClick={triggerPipeline}
-                disabled={isTriggering}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-emerald-600 hover:from-cyan-500 hover:to-emerald-500 text-white font-medium text-sm transition-all disabled:opacity-50 disabled:pointer-events-none shadow-lg shadow-cyan-950/20"
-              >
-                {isTriggering ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin text-white" />
-                    Running Ingestion...
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-4 h-4 fill-white" />
-                    Trigger Discovery Run
-                  </>
-                )}
+                Logout
               </button>
             </div>
-          </div>
+          )}
         </header>
+
+        {/* Pipeline Control Center */}
+        <section className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-neutral-900/60 to-neutral-900/40 backdrop-blur-md border border-neutral-800/80 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-[300px] h-[300px] rounded-full bg-cyan-500/5 blur-[80px] pointer-events-none" />
+          
+          <div className="flex flex-col gap-1 relative z-10">
+            <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              Pipeline Control Center
+            </span>
+            <h2 className="text-base font-bold text-white">Trigger Attention Discovery Scan</h2>
+            <p className="text-xs text-neutral-400 max-w-2xl">
+              Initiate a manual run of the Squirryfy signal discovery ingestion. This will parse active RSS feeds, Subreddits, and YouTube channels, running them through the Gemini extraction, clustering, and scoring pipeline.
+            </p>
+          </div>
+          
+          <button
+            onClick={triggerPipeline}
+            disabled={isTriggering}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-600 to-emerald-600 hover:from-cyan-500 hover:to-emerald-500 text-white font-semibold text-sm transition-all disabled:opacity-50 disabled:pointer-events-none shadow-lg shadow-cyan-950/20 relative z-10 flex-shrink-0"
+          >
+            {isTriggering ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                Running Ingestion...
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4 fill-white" />
+                Trigger Discovery Run
+              </>
+            )}
+          </button>
+        </section>
 
         {/* Date Selection Panel */}
         <section className="mb-8 p-4 rounded-2xl bg-neutral-900/50 backdrop-blur-md border border-neutral-800/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -851,7 +859,23 @@ export default function DashboardPage() {
 
         {/* TAB 3: CONFIGURATION MANAGER */}
         {activeTab === 'configs' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-6">
+            <div className="bg-neutral-900/40 backdrop-blur-md border border-neutral-800/80 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex flex-col gap-0.5">
+                <h3 className="text-sm font-semibold text-white">Sync Configuration Data</h3>
+                <p className="text-xs text-neutral-500">Pull latest region, category, weight, and scoring configurations from the database.</p>
+              </div>
+              <button
+                onClick={fetchConfigs}
+                disabled={isFetchingConfig}
+                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-neutral-300 font-semibold text-xs transition-all disabled:opacity-50 self-start sm:self-auto"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isFetchingConfig ? 'animate-spin text-cyan-400' : ''}`} />
+                {isFetchingConfig ? 'Syncing...' : 'Sync Config Data'}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Regions toggle */}
             <div className="bg-neutral-900/20 border border-neutral-800/60 rounded-2xl p-6">
               <h2 className="text-base font-bold text-white mb-4 flex items-center gap-2">
@@ -984,7 +1008,8 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
         {/* TAB 4: SQUIRRY EXPORT */}
         {activeTab === 'export' && (
