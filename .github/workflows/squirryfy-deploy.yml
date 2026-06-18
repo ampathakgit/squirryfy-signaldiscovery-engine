@@ -70,6 +70,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SQUIRRY_API_URL: ${{ secrets.SQUIRRY_API_URL }}
           SQUIRRY_API_KEY: ${{ secrets.SQUIRRY_API_KEY }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
           if [ -z "$SERVER_IP" ]; then
             echo "::error::Target SERVER_IP is not set. Please run the Terraform workflow or define secrets.SERVER_IP."
@@ -87,6 +88,7 @@ jobs:
             echo 'GEMINI_API_KEY=$GEMINI_API_KEY' >> /etc/squirryfy.env && \
             echo 'SQUIRRY_API_URL=$SQUIRRY_API_URL' >> /etc/squirryfy.env && \
             echo 'SQUIRRY_API_KEY=$SQUIRRY_API_KEY' >> /etc/squirryfy.env && \
+            echo 'JWT_SECRET=$JWT_SECRET' >> /etc/squirryfy.env && \
             echo 'Logging in to GHCR on server...' && \
             docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} && \
             echo 'Pulling latest image...' && \
