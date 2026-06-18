@@ -118,6 +118,7 @@ CREATE TABLE IF NOT EXISTS "public"."discovery_final_signals" (
   "ready_for_squirry_analysis" BOOLEAN NOT NULL DEFAULT true,
   "run_id" UUID NOT NULL REFERENCES "public"."discovery_runs"("id") ON DELETE CASCADE,
   "cluster_id" UUID REFERENCES "public"."discovery_signal_clusters"("id") ON DELETE SET NULL,
+  "squirry_response" JSONB,
   "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
   "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now()
 );

@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    const formattedSignals = (finalSignals || []).map(sig => ({
+    const formattedSignals = (finalSignals || []).map(sig => sig.squirry_response || {
       signal_id: sig.signal_id,
       region: sig.region_id,
       category: sig.category_id,
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       score: sig.score,
       entities: sig.entities,
       ready_for_squirry_analysis: sig.ready_for_squirry_analysis
-    }));
+    });
 
     return NextResponse.json({
       date: dateParam,

@@ -509,7 +509,9 @@ export class DiscoveryPipeline {
                 const resData = await squirryResponse.json();
                 const squirryData = resData.data;
 
-                const updateData: Record<string, any> = {};
+                const updateData: Record<string, any> = {
+                  squirry_response: resData
+                };
                 if (squirryData.summary) {
                   updateData.why_selected = [squirryData.summary];
                 }
