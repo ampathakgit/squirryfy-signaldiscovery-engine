@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Play, Settings, Globe, Tag, Flame, FileJson, 
   CheckCircle2, XCircle, AlertCircle, Loader2, 
@@ -8,6 +9,34 @@ import {
 } from 'lucide-react';
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
+
+  // Fetch current user details
+  const fetchMe = async () => {
+    try {
+      const resp = await fetch('/api/auth/me');
+      if (resp.ok) {
+        const data = await resp.json();
+        setCurrentUser(data.username);
+      }
+    } catch (e) {
+      console.error('Failed to fetch user:', e);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      const resp = await fetch('/api/auth/logout', { method: 'POST' });
+      if (resp.ok) {
+        router.push('/login');
+        router.refresh();
+      }
+    } catch (e) {
+      console.error('Failed to logout:', e);
+    }
+  };
+
   // Configs state
   const [regions, setRegions] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -242,6 +271,10 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
+    fetchMe();
+  }, []);
+
+  useEffect(() => {
     fetchConfigs();
     fetchRuns();
   }, [filterMode, filterDate, filterStartDate, filterEndDate]);
@@ -300,31 +333,46 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={fetchConfigs}
-              className="p-2.5 rounded-xl bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 transition-all text-neutral-400"
-              title="Refresh configuration data"
-            >
-              <RefreshCw className={`w-4 h-4 ${isFetchingConfig ? 'animate-spin text-cyan-400' : ''}`} />
-            </button>
-            <button
-              onClick={triggerPipeline}
-              disabled={isTriggering}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-emerald-600 hover:from-cyan-500 hover:to-emerald-500 text-white font-medium text-sm transition-all disabled:opacity-50 disabled:pointer-events-none shadow-lg shadow-cyan-950/20"
-            >
-              {isTriggering ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin text-white" />
-                  Running Ingestion...
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4 fill-white" />
-                  Trigger Discovery Run
-                </>
-              )}
-            </button>
+          <div className="flex items-center gap-4">
+            {currentUser && (
+              <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-neutral-900/60 border border-neutral-800/80 text-xs text-neutral-300">
+                <span className="font-semibold text-cyan-400">👤 {currentUser}</span>
+                <span className="text-neutral-750">|</span>
+                <button
+                  onClick={handleLogout}
+                  className="text-neutral-500 hover:text-rose-400 font-medium transition-colors cursor-pointer"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={fetchConfigs}
+                className="p-2.5 rounded-xl bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 transition-all text-neutral-400"
+                title="Refresh configuration data"
+              >
+                <RefreshCw className={`w-4 h-4 ${isFetchingConfig ? 'animate-spin text-cyan-400' : ''}`} />
+              </button>
+              <button
+                onClick={triggerPipeline}
+                disabled={isTriggering}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-emerald-600 hover:from-cyan-500 hover:to-emerald-500 text-white font-medium text-sm transition-all disabled:opacity-50 disabled:pointer-events-none shadow-lg shadow-cyan-950/20"
+              >
+                {isTriggering ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    Running Ingestion...
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4 fill-white" />
+                    Trigger Discovery Run
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </header>
 
