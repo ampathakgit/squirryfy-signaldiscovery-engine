@@ -59,7 +59,7 @@ resource "hcloud_firewall" "firewall" {
 resource "hcloud_server" "server" {
   name         = "squirryfy-server"
   image        = "ubuntu-24.04"
-  server_type  = "cx22"
+  server_type  = "cpx21"
   location     = "ash" # Ashburn, Virginia, USA
   firewall_ids = [hcloud_firewall.firewall.id]
   ssh_keys     = [hcloud_ssh_key.ssh_key.id]
