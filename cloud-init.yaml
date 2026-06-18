@@ -16,10 +16,18 @@ runcmd:
   - echo "SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY_HERE" >> /etc/squirryfy.env
   # Note: You can add other runtime env variables like GEMINI_API_KEY, SQUIRRY_API_KEY, etc. in /etc/squirryfy.env
 
+  # Create Caddy configuration directory and write Caddyfile for multiple domains
+  - mkdir -p /etc/caddy
+  - |
+    cat << 'EOF' > /etc/caddy/Caddyfile
+    squirryfy.com, www.squirryfy.com, squirrify.com, www.squirrify.com {
+        reverse_proxy 127.0.0.1:3000
+    }
+    EOF
+
   # Run the application container bound to localhost loopback only (127.0.0.1:3000)
   # Uses the public GHCR repository image with an automated restart policy
   - docker run -d --name squirryfy --restart unless-stopped -p 127.0.0.1:3000:3000 --env-file /etc/squirryfy.env ghcr.io/ampathakgit/squirryfy-signaldiscovery-engine:latest || true
 
-  # Run stable Caddy v2 reverse-proxy mapping public ports 80/443
-  # Maps persistent volume volumes for certificates and configuration
-  - docker run -d --name caddy --restart unless-stopped -p 80:80 -p 443:443 -v caddy_data:/data -v caddy_config:/config caddy caddy reverse-proxy --from [YOUR_DOMAIN_HERE] --to 127.0.0.1:3000
+  # Run stable Caddy v2 reverse-proxy mapping public ports 80/443 and mounting Caddyfile config
+  - docker run -d --name caddy --restart unless-stopped --network host -v /etc/caddy/Caddyfile:/etc/caddy/Caddyfile -v caddy_data:/data -v caddy_config:/config caddy

@@ -101,6 +101,15 @@ jobs:
               -p 127.0.0.1:3000:3000 \
               --env-file /etc/squirryfy.env \
               ghcr.io/${REPO_OWNER}/squirryfy-signaldiscovery-engine:latest && \
+            echo 'Updating Caddy configuration...' && \
+            mkdir -p /etc/caddy && \
+            echo 'squirryfy.com, www.squirryfy.com, squirrify.com, www.squirrify.com {' > /etc/caddy/Caddyfile && \
+            echo '    reverse_proxy 127.0.0.1:3000' >> /etc/caddy/Caddyfile && \
+            echo '}' >> /etc/caddy/Caddyfile && \
+            echo 'Restarting Caddy...' && \
+            docker stop caddy || true && \
+            docker rm caddy || true && \
+            docker run -d --name caddy --restart unless-stopped --network host -v /etc/caddy/Caddyfile:/etc/caddy/Caddyfile -v caddy_data:/data -v caddy_config:/config caddy && \
             echo 'Pruning unused docker elements...' && \
             docker image prune -f && \
             echo '✅ Deployment completed successfully!'
