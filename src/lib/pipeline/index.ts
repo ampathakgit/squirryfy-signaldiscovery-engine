@@ -480,64 +480,75 @@ export class DiscoveryPipeline {
             // 2. Trigger Squirry AI analysis concurrently and collect promises
             const targetUrl = canonical.articleUrl || canonical.url;
             const squirryPromise = (async () => {
-              try {
-                console.log(`[Squirry AI ${signalId}] Triggering analysis for: ${targetUrl}`);
-                const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-                if (squirryApiKey) {
-                  headers['x-api-key'] = squirryApiKey;
-                }
-
-                // Squirry execution gets a generous 40-second timeout
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 40000);
-
-                const squirryResponse = await fetch(`${squirryApiUrl}/analyze`, {
-                  method: 'POST',
-                  headers,
-                  signal: controller.signal,
-                  body: JSON.stringify({
-                    url: targetUrl,
-                    forceRefresh: false
-                  })
-                });
-                clearTimeout(timeoutId);
-
-                if (!squirryResponse.ok) {
-                  throw new Error(`Squirry API returned status code ${squirryResponse.status}`);
-                }
-
-                const resData = await squirryResponse.json();
-                const squirryData = resData.data;
-
-                const updateData: Record<string, any> = {
-                  squirry_response: resData
-                };
-                if (squirryData.summary) {
-                  updateData.why_selected = [squirryData.summary];
-                }
-                if (squirryData.referred_entities && Array.isArray(squirryData.referred_entities)) {
-                  updateData.entities = squirryData.referred_entities.map((e: any) => e.entity_name);
-                }
-                if (squirryData.clean_title) {
-                  updateData.title = squirryData.clean_title.replace(/\u0026amp;/g, '\u0026').replace(/\u0026quot;/g, '"').trim();
-                }
-
-                if (Object.keys(updateData).length > 0) {
-                  updateData.updated_at = new Date().toISOString();
-                  
-                  const { error: updateError } = await supabase
-                    .from('discovery_final_signals')
-                    .update(updateData)
-                    .eq('signal_id', signalId);
-
-                  if (updateError) {
-                    throw new Error(`Failed to update database record: ${updateError.message}`);
+              const maxRetries = 3;
+              let delay = 2000;
+              for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                  console.log(`[Squirry AI ${signalId}] Triggering analysis for: ${targetUrl} (Attempt ${attempt + 1}/${maxRetries})`);
+                  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+                  if (squirryApiKey) {
+                    headers['x-api-key'] = squirryApiKey;
                   }
-                  console.log(`[Squirry AI ${signalId}] Successfully enriched signal with Squirry AI!`);
+
+                  // Squirry execution gets a generous 40-second timeout
+                  const controller = new AbortController();
+                  const timeoutId = setTimeout(() => controller.abort(), 40000);
+
+                  const squirryResponse = await fetch(`${squirryApiUrl}/analyze`, {
+                    method: 'POST',
+                    headers,
+                    signal: controller.signal,
+                    body: JSON.stringify({
+                      url: targetUrl,
+                      forceRefresh: false
+                    })
+                  });
+                  clearTimeout(timeoutId);
+
+                  if (!squirryResponse.ok) {
+                    throw new Error(`Squirry API returned status code ${squirryResponse.status}`);
+                  }
+
+                  const resData = await squirryResponse.json();
+                  const squirryData = resData.data;
+
+                  const updateData: Record<string, any> = {
+                    squirry_response: resData
+                  };
+                  if (squirryData.summary) {
+                    updateData.why_selected = [squirryData.summary];
+                  }
+                  if (squirryData.referred_entities && Array.isArray(squirryData.referred_entities)) {
+                    updateData.entities = squirryData.referred_entities.map((e: any) => e.entity_name);
+                  }
+                  if (squirryData.clean_title) {
+                    updateData.title = squirryData.clean_title.replace(/\u0026amp;/g, '\u0026').replace(/\u0026quot;/g, '"').trim();
+                  }
+
+                  if (Object.keys(updateData).length > 0) {
+                    updateData.updated_at = new Date().toISOString();
+                    
+                    const { error: updateError } = await supabase
+                      .from('discovery_final_signals')
+                      .update(updateData)
+                      .eq('signal_id', signalId);
+
+                    if (updateError) {
+                      throw new Error(`Failed to update database record: ${updateError.message}`);
+                    }
+                    console.log(`[Squirry AI ${signalId}] Successfully enriched signal with Squirry AI!`);
+                  }
+                  return; // Exit loop and promise on success
+                } catch (err: any) {
+                  console.error(`[Squirry AI ${signalId}] Attempt ${attempt + 1} failed:`, err.message);
+                  if (attempt < maxRetries - 1) {
+                    console.log(`[Squirry AI ${signalId}] Retrying in ${delay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                  } else {
+                    throw new Error(`Squirry AI analysis failed for signal "${cluster.title}" (${targetUrl}): ${err.message}`);
+                  }
                 }
-              } catch (err: any) {
-                console.error(`[Squirry AI ${signalId}] Analysis failed:`, err.message);
-                throw new Error(`Squirry AI analysis failed for signal "${cluster.title}" (${targetUrl}): ${err.message}`);
               }
             })();
 

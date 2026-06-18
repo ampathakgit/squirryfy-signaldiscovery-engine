@@ -8,7 +8,7 @@ export class LLMFactory {
     switch (providerName) {
       case 'gemini':
         const apiKey = process.env.GEMINI_API_KEY || '';
-        const modelName = process.env.DEFAULT_GEMINI_MODEL || 'gemini-2.0-flash';
+        const modelName = process.env.DEFAULT_GEMINI_MODEL || 'gemini-1.5-flash';
         if (!apiKey) {
           console.warn('[LLMFactory] WARNING: GEMINI_API_KEY is not defined in environment variables.');
         }
