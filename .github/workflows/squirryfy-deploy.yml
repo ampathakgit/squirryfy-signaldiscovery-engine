@@ -65,6 +65,11 @@ jobs:
         env:
           SERVER_IP: ${{ inputs.target_server_ip || secrets.SERVER_IP }}
           REPO_OWNER: ${{ github.repository_owner }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SQUIRRY_API_URL: ${{ secrets.SQUIRRY_API_URL }}
+          SQUIRRY_API_KEY: ${{ secrets.SQUIRRY_API_KEY }}
         run: |
           if [ -z "$SERVER_IP" ]; then
             echo "::error::Target SERVER_IP is not set. Please run the Terraform workflow or define secrets.SERVER_IP."
@@ -73,8 +78,15 @@ jobs:
 
           echo "Deploying to server: $SERVER_IP..."
           
-          # Connect via SSH, pull latest image, stop and remove old container, and start new one
+          # Connect via SSH, write environment variables, pull latest image, and run container
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@$SERVER_IP "
+            echo 'Updating /etc/squirryfy.env with deployment variables...' && \
+            mkdir -p /etc && \
+            echo 'SUPABASE_URL=$SUPABASE_URL' > /etc/squirryfy.env && \
+            echo 'SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY' >> /etc/squirryfy.env && \
+            echo 'GEMINI_API_KEY=$GEMINI_API_KEY' >> /etc/squirryfy.env && \
+            echo 'SQUIRRY_API_URL=$SQUIRRY_API_URL' >> /etc/squirryfy.env && \
+            echo 'SQUIRRY_API_KEY=$SQUIRRY_API_KEY' >> /etc/squirryfy.env && \
             echo 'Logging in to GHCR on server...' && \
             docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} && \
             echo 'Pulling latest image...' && \
