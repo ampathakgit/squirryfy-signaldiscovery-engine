@@ -27,7 +27,6 @@ An automated regional internet attention scanner and discovery pipeline for Squi
 3. **Database Setup & Seed**:
    Run the seed script to populate regions, categories, source weights, and scoring rules:
    ```bash
-   npx prisma db push
    npx tsx src/scripts/seed.ts
    ```
 
