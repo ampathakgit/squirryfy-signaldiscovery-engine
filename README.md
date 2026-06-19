@@ -4,6 +4,26 @@ An automated regional internet attention scanner and discovery pipeline for Squi
 
 ---
 
+## Architecture & E2E Integration
+
+```mermaid
+graph TD
+    A[Ingestion Cron / Manual Run] -->|Scans RSS/Reddit/YT| B(Signal Discovery Engine)
+    B -->|Gemini Clusters & Scores| C[(Supabase Database)]
+    C -->|Stores discovery_final_signals| D[Admin Dashboard]
+    D -->|Click: Generate Carousel| E[trigger API Endpoint]
+    E -->|Spawns background Python microservice| F(Antigravity Content Agent)
+    F -->|Tool: list_daily_signals| C
+    F -->|Tool: get_squirry_analysis| C
+    F -->|Creative Director role plans copies & themes| G[Carousel Deck Schema]
+    G -->|Playwright headless render| H[Slide JPEGs]
+    H -->|Uploads directly| I[(Supabase Storage)]
+    F -->|Publishes slide URLs + caption| J[Meta Graph API]
+    J -->|Posts Carousel Live| K[Instagram: Dev.Squirry.AI]
+```
+
+---
+
 ## Getting Started
 
 ### Local Development
