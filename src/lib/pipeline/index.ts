@@ -546,7 +546,8 @@ export class DiscoveryPipeline {
                     await new Promise(resolve => setTimeout(resolve, delay));
                     delay *= 2;
                   } else {
-                    throw new Error(`Squirry AI analysis failed for signal "${cluster.title}" (${targetUrl}): ${err.message}`);
+                    await log('WARN', `Squirry AI analysis failed for signal "${cluster.title}" (${targetUrl}) after ${maxRetries} attempts: ${err.message}. Skipping Squirry enrichment.`);
+                    return;
                   }
                 }
               }
