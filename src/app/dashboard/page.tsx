@@ -104,6 +104,7 @@ export default function DashboardPage() {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [lightboxCaption, setLightboxCaption] = useState<string>('');
   const [expandedLogPostId, setExpandedLogPostId] = useState<string | null>(null);
+  const [selectedInstagramRunId, setSelectedInstagramRunId] = useState<string>('');
 
   // Fetch initial config and runs
   const fetchConfigs = async () => {
@@ -277,12 +278,17 @@ export default function DashboardPage() {
 
   // Trigger Instagram Agent
   const triggerInstagramAgent = async () => {
-    const isConfirmed = window.confirm("Are you sure you want to trigger the Squirryfy Instagram Creator Agent? This will process the top daily signal and generate/render slide carousels in the background.");
+    const runLabel = selectedInstagramRunId ? `Run ID ${selectedInstagramRunId}` : 'the latest completed run';
+    const isConfirmed = window.confirm(`Are you sure you want to trigger the Squirryfy Instagram Creator Agent using ${runLabel}? This will process the top trend and generate slide carousels in the background.`);
     if (!isConfirmed) return;
     
     setIsTriggeringInstagram(true);
     try {
-      const resp = await fetch('/api/instagram/trigger', { method: 'POST' });
+      const resp = await fetch('/api/instagram/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ runId: selectedInstagramRunId || undefined })
+      });
       if (resp.ok) {
         alert("Instagram agent triggered in the background. It will fetch the top signal, render slides, and post to Instagram. Check status in a few seconds.");
         setTimeout(() => {
@@ -593,23 +599,44 @@ export default function DashboardPage() {
               </p>
             </div>
             
-            <button
-              onClick={triggerInstagramAgent}
-              disabled={isTriggeringInstagram}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-semibold text-sm transition-all disabled:opacity-50 disabled:pointer-events-none shadow-lg shadow-pink-950/20 relative z-10 flex-shrink-0"
-            >
-              {isTriggeringInstagram ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin text-white" />
-                  Spawning Agent...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 text-white" />
-                  Generate Instagram Carousel
-                </>
-              )}
-            </button>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 relative z-10 flex-shrink-0">
+              <div className="flex flex-col gap-1.5 min-w-[200px]">
+                <span className="text-[10px] font-bold text-pink-400/80 uppercase tracking-wider">Source Discovery Run</span>
+                <select
+                  value={selectedInstagramRunId}
+                  onChange={(e) => setSelectedInstagramRunId(e.target.value)}
+                  className="w-full bg-neutral-950/80 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white font-medium focus:outline-none focus:border-pink-500"
+                >
+                  <option value="">Latest Completed Run</option>
+                  {runs
+                    .filter(run => run.status === 'COMPLETED')
+                    .map(run => (
+                      <option key={run.id} value={run.id}>
+                        {new Date(run.startedAt).toLocaleDateString()} - {run.id.substring(0, 8)}
+                      </option>
+                    ))
+                  }
+                </select>
+              </div>
+
+              <button
+                onClick={triggerInstagramAgent}
+                disabled={isTriggeringInstagram}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-semibold text-sm transition-all disabled:opacity-50 disabled:pointer-events-none shadow-lg shadow-pink-950/20 flex-shrink-0 self-end sm:self-auto"
+              >
+                {isTriggeringInstagram ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    Spawning Agent...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 text-white" />
+                    Generate Instagram Carousel
+                  </>
+                )}
+              </button>
+            </div>
           </section>
         )}
 

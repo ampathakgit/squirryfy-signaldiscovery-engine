@@ -29,8 +29,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let runId: string | null = null;
+    try {
+      const body = await request.json();
+      runId = body?.runId || null;
+    } catch (e) {
+      // Body might be empty or invalid JSON, ignore and default to null
+    }
+
+    const spawnArgs = ["agent.py"];
+    if (runId) {
+      spawnArgs.push("--run-id", runId);
+    }
+
     // Spawn the agent run in the background
-    const child = spawn(pythonPath, ["agent.py"], {
+    const child = spawn(pythonPath, spawnArgs, {
       cwd,
       env: {
         ...process.env,

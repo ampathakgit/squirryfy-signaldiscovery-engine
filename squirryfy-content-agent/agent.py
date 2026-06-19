@@ -271,11 +271,43 @@ def get_latest_flash_model(api_key: str) -> str | None:
 
 # --- Direct Supabase DB & Storage REST Operations ---
 
-def get_top_daily_signal() -> str:
-    """Finds the top-scoring ready signal from the database directly."""
+def get_latest_completed_run_id() -> str | None:
+    """Queries the database to find the latest completed discovery run ID."""
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
+        return None
+    url = f"{SUPABASE_URL}/rest/v1/discovery_runs"
+    headers = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}"
+    }
+    params = {
+        "status": "eq.COMPLETED",
+        "order": "completed_at.desc",
+        "limit": "1"
+    }
+    try:
+        res = requests.get(url, headers=headers, params=params)
+        if res.status_code == 200:
+            data = res.json()
+            if data and len(data) > 0:
+                return data[0]["id"]
+    except Exception as e:
+        print(f"[Database Warning] Exception while querying latest completed run: {e}")
+    return None
+
+def get_top_daily_signal(run_id: str = None) -> str:
+    """Finds the top-scoring ready signal from the database directly, filtered by run_id if provided."""
     if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
         print("[Database] Missing Supabase credentials. Returning mock signal.")
         return "mock-signal-12345"
+        
+    resolved_run_id = run_id
+    if not resolved_run_id:
+        resolved_run_id = get_latest_completed_run_id()
+        if resolved_run_id:
+            print(f"[Database] Resolved latest completed run ID: {resolved_run_id}")
+        else:
+            print("[Database] No completed run found. Searching latest signals globally.")
         
     url = f"{SUPABASE_URL}/rest/v1/discovery_final_signals"
     headers = {
@@ -283,14 +315,18 @@ def get_top_daily_signal() -> str:
         "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}"
     }
     
-    # We query signals ready for analysis, sorted by score desc, in the last 2 days
-    two_days_ago = (datetime.date.today() - datetime.timedelta(days=2)).isoformat()
+    # We query signals ready for analysis, sorted by score desc, in the target run or last 2 days
     params = {
         "ready_for_squirry_analysis": "eq.true",
-        "created_at": f"gte.{two_days_ago}",
         "order": "score.desc",
         "limit": "1"
     }
+    
+    if resolved_run_id:
+        params["run_id"] = f"eq.{resolved_run_id}"
+    else:
+        two_days_ago = (datetime.date.today() - datetime.timedelta(days=2)).isoformat()
+        params["created_at"] = f"gte.{two_days_ago}"
     
     try:
         res = requests.get(url, headers=headers, params=params)
@@ -298,17 +334,32 @@ def get_top_daily_signal() -> str:
             data = res.json()
             if data and len(data) > 0:
                 return data[0]["signal_id"]
-        # Fallback to absolute latest ready signal if none found in last 2 days
-        params_fallback = {
-            "ready_for_squirry_analysis": "eq.true",
-            "order": "created_at.desc",
-            "limit": "1"
-        }
-        res = requests.get(url, headers=headers, params=params_fallback)
-        if res.status_code == 200:
-            data = res.json()
-            if data and len(data) > 0:
-                return data[0]["signal_id"]
+        
+        # If run_id was provided but had no ready signals, try fallback globally
+        if resolved_run_id:
+            print(f"[Database] No ready signals found for run ID: {resolved_run_id}. Falling back to global latest signal.")
+            fallback_params = {
+                "ready_for_squirry_analysis": "eq.true",
+                "order": "score.desc",
+                "limit": "1"
+            }
+            res = requests.get(url, headers=headers, params=fallback_params)
+            if res.status_code == 200:
+                data = res.json()
+                if data and len(data) > 0:
+                    return data[0]["signal_id"]
+        else:
+            # Fallback to absolute latest ready signal if none found in last 2 days
+            params_fallback = {
+                "ready_for_squirry_analysis": "eq.true",
+                "order": "created_at.desc",
+                "limit": "1"
+            }
+            res = requests.get(url, headers=headers, params=params_fallback)
+            if res.status_code == 200:
+                data = res.json()
+                if data and len(data) > 0:
+                    return data[0]["signal_id"]
     except Exception as e:
         print(f"[Database Warning] Exception while querying top signal: {e}")
         
@@ -505,12 +556,12 @@ def publish_to_instagram(caption: str, image_urls: list[str]) -> dict:
         "post_url": post_url
     }
 
-async def run_agent():
+async def run_agent(run_id: str = None):
     global post_id
     
     # 1. Fetch top daily signal ID first
     print("Selecting top daily signal from database...")
-    signal_id = get_top_daily_signal()
+    signal_id = get_top_daily_signal(run_id)
     
     # 2. Create the PENDING database record immediately
     print(f"Creating PENDING database record for Signal ID: {signal_id}...")
@@ -699,4 +750,9 @@ async def run_agent():
     log_info("=" * 60)
 
 if __name__ == "__main__":
-    asyncio.run(run_agent())
+    import argparse
+    parser = argparse.ArgumentParser(description="Squirryfy Instagram Creator Agent")
+    parser.add_argument("--run-id", type=str, help="Optional specific discovery run ID to select signals from")
+    args = parser.parse_args()
+    
+    asyncio.run(run_agent(run_id=args.run_id))
