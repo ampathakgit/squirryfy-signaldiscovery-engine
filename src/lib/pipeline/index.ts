@@ -262,7 +262,11 @@ export class DiscoveryPipeline {
             const normalized = NormalizerService.normalize(rawSig, runDate);
             
             // Heuristic check for regional relevance (only check global sources)
-            const isGlobalSource = rawSig.sourceId === 'hacker_news' || rawSig.sourceId === 'product_hunt';
+            const isGlobalSource = rawSig.sourceId === 'hacker_news' || 
+                                   rawSig.sourceId === 'product_hunt' ||
+                                   rawSig.sourceId === 'rss' ||
+                                   rawSig.sourceId === 'sports_feed' ||
+                                   rawSig.sourceId === 'finance_feed';
             if (isGlobalSource && !NormalizerService.isRegionallyRelevant(normalized.title, normalized.summary || '', region.id)) {
               await log('INFO', `Skipping raw signal "${normalized.title.substring(0, 45)}" for region=${region.id} due to lack of regional relevance.`);
               continue;
@@ -521,8 +525,9 @@ export class DiscoveryPipeline {
                   if (squirryData.referred_entities && Array.isArray(squirryData.referred_entities)) {
                     updateData.entities = squirryData.referred_entities.map((e: any) => e.entity_name);
                   }
-                  if (squirryData.clean_title) {
-                    updateData.title = squirryData.clean_title.replace(/\u0026amp;/g, '\u0026').replace(/\u0026quot;/g, '"').trim();
+                  const titleToUse = squirryData.clean_title || squirryData.title;
+                  if (titleToUse) {
+                    updateData.title = titleToUse.replace(/&amp;/g, '&').replace(/&quot;/g, '"').trim();
                   }
 
                   if (Object.keys(updateData).length > 0) {
