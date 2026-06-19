@@ -99,7 +99,7 @@ export class DiscoveryPipeline {
       let llmProvider: any = null;
       try {
         if (process.env.GEMINI_API_KEY) {
-          llmProvider = LLMFactory.getProvider();
+          llmProvider = await LLMFactory.getProvider();
           await log('INFO', `Initialized Gemini Provider (${llmProvider.modelName}) for local enrichment fallback.`);
         }
       } catch (err: any) {
