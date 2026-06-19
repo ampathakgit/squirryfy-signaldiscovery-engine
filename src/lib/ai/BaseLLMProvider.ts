@@ -42,8 +42,41 @@ export abstract class BaseLLMProvider implements LLMProvider {
     return null;
   }
 
+  protected convertSingleToDoubleQuotes(jsonString: string): string {
+    const singleQuoteRegex = /'((?:\\.|[^\\'\n])*)'/g;
+    return jsonString.replace(singleQuoteRegex, (match, content) => {
+      let escapedContent = '';
+      let backslashCount = 0;
+      for (let i = 0; i < content.length; i++) {
+        const char = content[i];
+        if (char === '\\') {
+          backslashCount++;
+          escapedContent += char;
+        } else if (char === '"') {
+          if (backslashCount % 2 === 0) {
+            escapedContent += '\\"';
+          } else {
+            escapedContent += char;
+          }
+          backslashCount = 0;
+        } else {
+          if (char === "'" && backslashCount % 2 === 1) {
+            escapedContent = escapedContent.slice(0, -1) + "'";
+          } else {
+            escapedContent += char;
+          }
+          backslashCount = 0;
+        }
+      }
+      return `"${escapedContent}"`;
+    });
+  }
+
   protected repairJSON(jsonString: string): string {
     let patched = jsonString;
+
+    // Convert single quoted strings to double quoted strings first
+    patched = this.convertSingleToDoubleQuotes(patched);
 
     // Fix Unquoted Keys
     patched = patched.replace(/([a-zA-Z0-9_]+)\s*:/g, (match, key) => {
@@ -51,12 +84,97 @@ export abstract class BaseLLMProvider implements LLMProvider {
       return `"${key}": `;
     });
 
-    // Replace Single Quotes with Double Quotes for structure
-    patched = patched.replace(/'([a-zA-Z0-9_]+)'\s*:/g, '"$1":');
-    patched = patched.replace(/:\s*'([^']*)'/g, ': "$1"');
-
-    // Fix Unescaped Quotes
-    patched = patched.replace(/(?<!\\)(?<![\{\[\,]\s*)(?<!:\s*)"(?!\s*[:])(?!\s*[,}\]])/g, '\\"');
+    // Escape unescaped quotes character-by-character with container tracking
+    let fixedStr = '';
+    let inString = false;
+    let lastStructural = '{';
+    const containerStack: string[] = [];
+    
+    for (let i = 0; i < patched.length; i++) {
+      const char = patched[i];
+      if (!inString) {
+        if (char === '{' || char === '[') {
+          containerStack.push(char);
+          lastStructural = char;
+        } else if (char === '}' || char === ']') {
+          containerStack.pop();
+          lastStructural = char;
+        } else if (char === ':' || char === ',') {
+          lastStructural = char;
+        }
+        
+        if (char === '"') {
+          inString = true;
+          fixedStr += char;
+        } else {
+          fixedStr += char;
+        }
+      } else {
+        if (char === '"') {
+          // Check if escaped
+          let isEscaped = false;
+          if (i > 0 && patched[i - 1] === '\\') {
+            let backslashCount = 0;
+            let j = i - 1;
+            while (j >= 0 && patched[j] === '\\') {
+              backslashCount++;
+              j--;
+            }
+            if (backslashCount % 2 === 1) {
+              isEscaped = true;
+            }
+          }
+          
+          if (isEscaped) {
+            fixedStr += char;
+          } else {
+            // Check if this is the closing quote
+            let isClosing = false;
+            let j = i + 1;
+            while (j < patched.length && /\s/.test(patched[j])) {
+              j++;
+            }
+            
+            const currentContainer = containerStack[containerStack.length - 1] || '{';
+            
+            if (currentContainer === '[') {
+              // Inside an array
+              if (j < patched.length && (patched[j] === ',' || patched[j] === ']')) {
+                isClosing = true;
+              } else if (j === patched.length) {
+                isClosing = true;
+              }
+            } else {
+              // Inside an object
+              if (lastStructural === '{' || lastStructural === ',') {
+                // Expecting key closing quote
+                if (j < patched.length && patched[j] === ':') {
+                  isClosing = true;
+                }
+              } else {
+                // Expecting value closing quote
+                if (j < patched.length && (patched[j] === ',' || patched[j] === '}')) {
+                  isClosing = true;
+                } else if (j === patched.length) {
+                  isClosing = true;
+                }
+              }
+            }
+            
+            if (isClosing) {
+              inString = false;
+              fixedStr += char;
+            } else {
+              // Unescaped quote -> escape it
+              fixedStr += '\\"';
+            }
+          }
+        } else {
+          fixedStr += char;
+        }
+      }
+    }
+    patched = fixedStr;
 
     // Insert Missing Commas
     patched = patched.replace(/([\}\]"\]])\s*([\{\[\"])/g, '$1, $2');
@@ -66,7 +184,7 @@ export abstract class BaseLLMProvider implements LLMProvider {
 
     // Escape Newlines inside strings
     let fixed = '';
-    let inString = false;
+    inString = false;
     for (let i = 0; i < patched.length; i++) {
       const char = patched[i];
       if (char === '"' && (i === 0 || patched[i - 1] !== '\\')) {

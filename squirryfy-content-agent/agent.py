@@ -76,17 +76,159 @@ def update_logs_db():
     except Exception as e:
         print(f"[Database Warning] Failed to update logs: {e}")
 
-# Helper to extract JSON from agent text response
+def convert_single_to_double_quotes(json_string: str) -> str:
+    single_quote_pattern = r"'((?:\\.|[^\\'\n])*)'"
+    
+    def replacer(match):
+        content = match.group(1)
+        escaped_content = []
+        backslash_count = 0
+        for char in content:
+            if char == '\\':
+                backslash_count += 1
+                escaped_content.append(char)
+            elif char == '"':
+                if backslash_count % 2 == 0:
+                    escaped_content.append('\\"')
+                else:
+                    escaped_content.append(char)
+                backslash_count = 0
+            else:
+                if char == "'" and backslash_count % 2 == 1:
+                    escaped_content.pop()
+                    escaped_content.append("'")
+                else:
+                    escaped_content.append(char)
+                backslash_count = 0
+        return f'"{ "".join(escaped_content) }"'
+        
+    return re.sub(single_quote_pattern, replacer, json_string)
+
+def repair_json(json_string: str) -> str:
+    patched = json_string
+    patched = convert_single_to_double_quotes(patched)
+    
+    # Fix unquoted keys
+    patched = re.sub(r'([a-zA-Z0-9_]+)\s*:', lambda m: m.group(0) if m.group(1) in ('http', 'https') else f'"{m.group(1)}": ', patched)
+    
+    # Escape unescaped quotes character-by-character with container tracking
+    fixed = []
+    in_string = False
+    last_structural = '{'
+    container_stack = []
+    
+    i = 0
+    n = len(patched)
+    while i < n:
+        char = patched[i]
+        if not in_string:
+            if char in ('{', '['):
+                container_stack.append(char)
+                last_structural = char
+            elif char in ('}', ']'):
+                if container_stack:
+                    container_stack.pop()
+                last_structural = char
+            elif char in (':', ','):
+                last_structural = char
+                
+            if char == '"':
+                in_string = True
+                fixed.append(char)
+            else:
+                fixed.append(char)
+        else:
+            if char == '"':
+                is_escaped = False
+                if i > 0 and patched[i-1] == '\\':
+                    backslash_count = 0
+                    j = i - 1
+                    while j >= 0 and patched[j] == '\\':
+                        backslash_count += 1
+                        j -= 1
+                    if backslash_count % 2 == 1:
+                        is_escaped = True
+                
+                if is_escaped:
+                    fixed.append(char)
+                else:
+                    is_closing = False
+                    j = i + 1
+                    while j < n and patched[j].isspace():
+                        j += 1
+                    
+                    current_container = container_stack[-1] if container_stack else '{'
+                    
+                    if current_container == '[':
+                        if j < n and patched[j] in (',', ']'):
+                            is_closing = True
+                        elif j == n:
+                            is_closing = True
+                    else:
+                        if last_structural in ('{', ','):
+                            if j < n and patched[j] == ':':
+                                is_closing = True
+                        else:
+                            if j < n and patched[j] in (',', '}'):
+                                is_closing = True
+                            elif j == n:
+                                is_closing = True
+                            
+                    if is_closing:
+                        in_string = False
+                        fixed.append(char)
+                    else:
+                        fixed.append('\\"')
+            else:
+                fixed.append(char)
+        i += 1
+        
+    patched = "".join(fixed)
+    
+    # Insert missing commas
+    patched = re.sub(r'([\}\]"\]])\s*([\{\[\"])', r'\1, \2', patched)
+    
+    # Remove trailing commas
+    patched = re.sub(r',\s*}', '}', patched)
+    patched = re.sub(r',\s*]', ']', patched)
+    
+    # Escape newlines inside strings
+    fixed = []
+    in_string = False
+    i = 0
+    n = len(patched)
+    while i < n:
+        char = patched[i]
+        if char == '"' and (i == 0 or patched[i-1] != '\\'):
+            in_string = not in_string
+            
+        if in_string:
+            if char == '\n':
+                fixed.append('\\n')
+            elif char == '\r':
+                pass
+            elif char == '\t':
+                fixed.append('\\t')
+            else:
+                fixed.append(char)
+        else:
+            fixed.append(char)
+        i += 1
+        
+    return "".join(fixed)
+
 def extract_json_block(text: str) -> dict:
     """Finds and parses the first JSON block or object found in the text."""
     match = re.search(r"```json\s*(.*?)\s*```", text, re.DOTALL)
     if match:
-        return json.loads(match.group(1).strip())
+        repaired = repair_json(match.group(1).strip())
+        return json.loads(repaired)
     
     start = text.find("{")
     end = text.rfind("}")
     if start != -1 and end != -1:
-        return json.loads(text[start:end+1])
+        repaired = repair_json(text[start:end+1])
+        return json.loads(repaired)
         
     raise ValueError(f"Could not find any JSON object in text: {text}")
 
