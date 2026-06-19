@@ -556,12 +556,15 @@ def publish_to_instagram(caption: str, image_urls: list[str]) -> dict:
         "post_url": post_url
     }
 
-async def run_agent(run_id: str = None):
+async def run_agent(run_id: str = None, signal_id: str = None):
     global post_id
     
     # 1. Fetch top daily signal ID first
-    print("Selecting top daily signal from database...")
-    signal_id = get_top_daily_signal(run_id)
+    if signal_id:
+        print(f"Targeting specific Signal ID: {signal_id}")
+    else:
+        print("Selecting top daily signal from database...")
+        signal_id = get_top_daily_signal(run_id)
     
     # 2. Create the PENDING database record immediately
     print(f"Creating PENDING database record for Signal ID: {signal_id}...")
@@ -753,6 +756,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Squirryfy Instagram Creator Agent")
     parser.add_argument("--run-id", type=str, help="Optional specific discovery run ID to select signals from")
+    parser.add_argument("--signal-id", type=str, help="Optional specific signal ID to process")
     args = parser.parse_args()
     
-    asyncio.run(run_agent(run_id=args.run_id))
+    asyncio.run(run_agent(run_id=args.run_id, signal_id=args.signal_id))

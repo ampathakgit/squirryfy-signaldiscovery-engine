@@ -103,7 +103,7 @@ export default function DashboardPage() {
   const [isTriggeringInstagram, setIsTriggeringInstagram] = useState<boolean>(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [lightboxCaption, setLightboxCaption] = useState<string>('');
-  const [expandedLogPostId, setExpandedLogPostId] = useState<string | null>(null);
+  const [expandedLogs, setExpandedLogs] = useState<Record<string, boolean>>({});
   const [selectedInstagramRunId, setSelectedInstagramRunId] = useState<string>('');
 
   // Fetch initial config and runs
@@ -239,6 +239,17 @@ export default function DashboardPage() {
       if (resp.ok) {
         const data = await resp.json();
         setInstagramPosts(data || []);
+        
+        // Auto-expand FAILED and PENDING logs if not already explicitly toggled
+        setExpandedLogs(prev => {
+          const next = { ...prev };
+          (data || []).forEach((post: any) => {
+            if (!(post.id in next)) {
+              next[post.id] = post.status === 'FAILED' || post.status === 'PENDING';
+            }
+          });
+          return next;
+        });
       }
     } catch (e) {
       console.error('Failed to fetch Instagram posts:', e);
@@ -294,6 +305,35 @@ export default function DashboardPage() {
         setTimeout(() => {
           fetchInstagramPosts();
         }, 3000);
+      } else {
+        const errData = await resp.json().catch(() => ({}));
+        alert(`Error triggering agent: ${errData.error || 'Unknown error'}`);
+      }
+    } catch (e: any) {
+      alert(`Error triggering agent: ${e.message}`);
+    } finally {
+      setIsTriggeringInstagram(false);
+    }
+  };
+
+  // Trigger Instagram Agent for specific signal
+  const triggerInstagramAgentForSignal = async (signalId: string, title: string) => {
+    const isConfirmed = window.confirm(`Are you sure you want to trigger the Squirryfy Instagram Creator Agent for signal: "${title}"? This will generate slide carousels in the background.`);
+    if (!isConfirmed) return;
+    
+    setIsTriggeringInstagram(true);
+    setActiveSection('instagram');
+    try {
+      const resp = await fetch('/api/instagram/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signalId })
+      });
+      if (resp.ok) {
+        alert("Instagram agent triggered in the background for this signal. Switched to Instagram tab to monitor logs.");
+        setTimeout(() => {
+          fetchInstagramPosts();
+        }, 1500);
       } else {
         const errData = await resp.json().catch(() => ({}));
         alert(`Error triggering agent: ${errData.error || 'Unknown error'}`);
@@ -1076,6 +1116,17 @@ export default function DashboardPage() {
                                 </div>
                               </div>
                             </div>
+
+                            <div className="border-t border-neutral-800/50 pt-4 mt-auto">
+                              <button
+                                onClick={() => triggerInstagramAgentForSignal(sig.signalId, sig.title)}
+                                disabled={isTriggeringInstagram}
+                                className="w-full flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-pink-650 to-purple-650 hover:from-pink-600 hover:to-purple-600 border border-pink-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-pink-950/20 active:scale-[0.98] cursor-pointer"
+                              >
+                                <Instagram className="w-3.5 h-3.5" />
+                                Generate Carousel
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );
@@ -1307,7 +1358,7 @@ export default function DashboardPage() {
         ) : (
           /* INSTAGRAM CREATOR SECTION CONTENT */
           <div className="space-y-6">
-            {isFetchingInstagramPosts ? (
+            {isFetchingInstagramPosts && instagramPosts.length === 0 ? (
               <div className="text-center py-16 text-neutral-500 flex flex-col items-center justify-center gap-2">
                 <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
                 Loading Instagram Carousels...
@@ -1468,14 +1519,14 @@ export default function DashboardPage() {
                       {/* Expandable Execution Logs Console */}
                       <div className="pt-2 border-t border-neutral-900/60 mt-4 flex flex-col gap-2">
                         <button
-                          onClick={() => setExpandedLogPostId(expandedLogPostId === post.id ? null : post.id)}
+                          onClick={() => setExpandedLogs(prev => ({ ...prev, [post.id]: !prev[post.id] }))}
                           className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-cyan-400 font-semibold transition-colors self-start cursor-pointer"
                         >
-                          <Settings className={`w-3.5 h-3.5 ${expandedLogPostId === post.id ? 'text-cyan-400' : ''}`} />
-                          {expandedLogPostId === post.id ? "Hide Agent Run Logs" : "View Agent Run Logs"}
+                          <Settings className={`w-3.5 h-3.5 ${expandedLogs[post.id] ? 'text-cyan-400' : ''}`} />
+                          {expandedLogs[post.id] ? "Hide Agent Run Logs" : "View Agent Run Logs"}
                         </button>
                         
-                        {expandedLogPostId === post.id && (
+                        {expandedLogs[post.id] && (
                           <div className="bg-neutral-950/80 border border-neutral-900 rounded-xl p-4 font-mono text-xs max-h-[220px] overflow-y-auto space-y-1.5 text-neutral-300">
                             {(!post.logs || post.logs.length === 0) ? (
                               <div className="text-neutral-600 text-center py-4">No execution logs captured yet for this agent run.</div>

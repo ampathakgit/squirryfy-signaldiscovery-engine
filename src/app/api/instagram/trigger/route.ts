@@ -30,15 +30,19 @@ export async function POST(request: NextRequest) {
     }
 
     let runId: string | null = null;
+    let signalId: string | null = null;
     try {
       const body = await request.json();
       runId = body?.runId || null;
+      signalId = body?.signalId || null;
     } catch (e) {
       // Body might be empty or invalid JSON, ignore and default to null
     }
 
     const spawnArgs = ["agent.py"];
-    if (runId) {
+    if (signalId) {
+      spawnArgs.push("--signal-id", signalId);
+    } else if (runId) {
       spawnArgs.push("--run-id", runId);
     }
 
