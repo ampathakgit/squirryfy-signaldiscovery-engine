@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# python venv and cache
+squirryfy-content-agent/.venv/
+squirryfy-content-agent/output/
+squirryfy-content-agent/__pycache__/
+*.pyc

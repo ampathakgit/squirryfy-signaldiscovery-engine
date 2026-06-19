@@ -17,10 +17,10 @@ export async function GET(request: NextRequest) {
       .from('discovery_final_signals')
       .select('*, region:discovery_regions(*), category:discovery_categories(*)');
 
-    if (regionId) {
+    if (regionId && regionId !== 'all') {
       query = query.eq('region_id', regionId);
     }
-    if (categoryId) {
+    if (categoryId && categoryId !== 'all') {
       query = query.eq('category_id', categoryId);
     }
     if (runId && runId !== 'all') {

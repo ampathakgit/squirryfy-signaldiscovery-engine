@@ -1,0 +1,4 @@
+google-antigravity
+pydantic
+playwright
+requests

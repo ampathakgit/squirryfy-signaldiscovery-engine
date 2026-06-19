@@ -20,8 +20,15 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Protect all /api/ endpoints EXCEPT /api/auth/login
+  // Protect all /api/ endpoints EXCEPT /api/auth/login and /api/mcp (authenticated via API key)
   if (pathname.startsWith('/api') && !pathname.startsWith('/api/auth/login')) {
+    if (pathname.startsWith('/api/mcp')) {
+      const apiKeyHeader = request.headers.get('x-api-key') || request.headers.get('Authorization')?.replace('Bearer ', '');
+      if (apiKeyHeader && apiKeyHeader === process.env.SQUIRRY_API_KEY) {
+        return NextResponse.next();
+      }
+    }
+
     const sessionCookie = request.cookies.get('squirryfy_session')?.value;
     if (!sessionCookie) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
