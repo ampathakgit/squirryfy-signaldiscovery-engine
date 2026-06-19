@@ -2,7 +2,7 @@ import { LLMProvider } from './types';
 import { GeminiProvider } from './GeminiProvider';
 
 async function getLatestFlashModel(apiKey: string): Promise<string> {
-  const defaultModel = 'gemini-1.5-flash';
+  const defaultModel = 'gemini-2.5-flash';
   if (!apiKey) return defaultModel;
   
   try {

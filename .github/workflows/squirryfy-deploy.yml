@@ -71,7 +71,7 @@ jobs:
           SQUIRRY_API_URL: ${{ secrets.SQUIRRY_API_URL }}
           SQUIRRY_API_KEY: ${{ secrets.SQUIRRY_API_KEY }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          DEFAULT_GEMINI_MODEL: ${{ secrets.DEFAULT_GEMINI_MODEL || 'gemini-1.5-flash' }}
+          DEFAULT_GEMINI_MODEL: ${{ secrets.DEFAULT_GEMINI_MODEL }}
           INSTAGRAM_BUSINESS_ACCOUNT_ID: ${{ secrets.INSTAGRAM_BUSINESS_ACCOUNT_ID }}
           META_PAGE_ACCESS_TOKEN: ${{ secrets.META_PAGE_ACCESS_TOKEN }}
         run: |
