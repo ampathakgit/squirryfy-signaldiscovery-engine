@@ -103,6 +103,7 @@ export default function DashboardPage() {
   const [isTriggeringInstagram, setIsTriggeringInstagram] = useState<boolean>(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [lightboxCaption, setLightboxCaption] = useState<string>('');
+  const [expandedLogPostId, setExpandedLogPostId] = useState<string | null>(null);
 
   // Fetch initial config and runs
   const fetchConfigs = async () => {
@@ -1435,6 +1436,34 @@ export default function DashboardPage() {
                             )}
                           </div>
                         </div>
+                      </div>
+                      
+                      {/* Expandable Execution Logs Console */}
+                      <div className="pt-2 border-t border-neutral-900/60 mt-4 flex flex-col gap-2">
+                        <button
+                          onClick={() => setExpandedLogPostId(expandedLogPostId === post.id ? null : post.id)}
+                          className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-cyan-400 font-semibold transition-colors self-start cursor-pointer"
+                        >
+                          <Settings className={`w-3.5 h-3.5 ${expandedLogPostId === post.id ? 'text-cyan-400' : ''}`} />
+                          {expandedLogPostId === post.id ? "Hide Agent Run Logs" : "View Agent Run Logs"}
+                        </button>
+                        
+                        {expandedLogPostId === post.id && (
+                          <div className="bg-neutral-950/80 border border-neutral-900 rounded-xl p-4 font-mono text-xs max-h-[220px] overflow-y-auto space-y-1.5 text-neutral-300">
+                            {(!post.logs || post.logs.length === 0) ? (
+                              <div className="text-neutral-600 text-center py-4">No execution logs captured yet for this agent run.</div>
+                            ) : (
+                              post.logs.map((log: string, logIdx: number) => {
+                                const isError = log.includes('[ERROR]');
+                                return (
+                                  <div key={logIdx} className={`break-all ${isError ? 'text-red-400' : 'text-neutral-300'}`}>
+                                    {log}
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );

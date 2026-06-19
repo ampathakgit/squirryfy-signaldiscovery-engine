@@ -41,6 +41,41 @@ META_PAGE_ACCESS_TOKEN = os.getenv("META_PAGE_ACCESS_TOKEN", "")
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+# Global variables for tracking logs
+LOGS = []
+post_id = None
+
+def log_info(msg: str):
+    timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+    formatted = f"[{timestamp}] [INFO] {msg}"
+    print(formatted)
+    LOGS.append(formatted)
+    update_logs_db()
+
+def log_error(msg: str):
+    timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+    formatted = f"[{timestamp}] [ERROR] {msg}"
+    print(formatted)
+    LOGS.append(formatted)
+    update_logs_db()
+
+def update_logs_db():
+    if not post_id or post_id == "mock-post-uuid-12345":
+        return
+    url = f"{SUPABASE_URL}/rest/v1/instagram_posts?id=eq.{post_id}"
+    headers = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "logs": LOGS
+    }
+    try:
+        requests.patch(url, json=payload, headers=headers)
+    except Exception as e:
+        print(f"[Database Warning] Failed to update logs: {e}")
+
 # Helper to extract JSON from agent text response
 def extract_json_block(text: str) -> dict:
     """Finds and parses the first JSON block or object found in the text."""
@@ -56,6 +91,49 @@ def extract_json_block(text: str) -> dict:
     raise ValueError(f"Could not find any JSON object in text: {text}")
 
 # --- Direct Supabase DB & Storage REST Operations ---
+
+def get_top_daily_signal() -> str:
+    """Finds the top-scoring ready signal from the database directly."""
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
+        print("[Database] Missing Supabase credentials. Returning mock signal.")
+        return "mock-signal-12345"
+        
+    url = f"{SUPABASE_URL}/rest/v1/discovery_final_signals"
+    headers = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}"
+    }
+    
+    # We query signals ready for analysis, sorted by score desc, in the last 2 days
+    two_days_ago = (datetime.date.today() - datetime.timedelta(days=2)).isoformat()
+    params = {
+        "ready_for_squirry_analysis": "eq.true",
+        "created_at": f"gte.{two_days_ago}",
+        "order": "score.desc",
+        "limit": "1"
+    }
+    
+    try:
+        res = requests.get(url, headers=headers, params=params)
+        if res.status_code == 200:
+            data = res.json()
+            if data and len(data) > 0:
+                return data[0]["signal_id"]
+        # Fallback to absolute latest ready signal if none found in last 2 days
+        params_fallback = {
+            "ready_for_squirry_analysis": "eq.true",
+            "order": "created_at.desc",
+            "limit": "1"
+        }
+        res = requests.get(url, headers=headers, params=params_fallback)
+        if res.status_code == 200:
+            data = res.json()
+            if data and len(data) > 0:
+                return data[0]["signal_id"]
+    except Exception as e:
+        print(f"[Database Warning] Exception while querying top signal: {e}")
+        
+    return "mock-signal-12345"
 
 def create_instagram_post_db(signal_id: str, status: str, carousel_data: dict) -> str:
     """Creates a post entry in the Supabase instagram_posts table via direct PostgREST call."""
@@ -73,7 +151,8 @@ def create_instagram_post_db(signal_id: str, status: str, carousel_data: dict) -
     payload = {
         "signal_id": signal_id,
         "status": status,
-        "carousel_data": carousel_data
+        "carousel_data": carousel_data,
+        "logs": LOGS
     }
     try:
         res = requests.post(url, json=payload, headers=headers)
@@ -138,7 +217,7 @@ def upload_slide_to_storage(local_path: str, filename: str) -> str:
     public_url = f"{SUPABASE_URL}/storage/v1/object/public/instagram_carousels/{filename}"
     return public_url
 
-def update_instagram_post_db(post_id: str, status: str, media_urls: list[str], instagram_media_id: str = None, post_url: str = None, error_message: str = None):
+def update_instagram_post_db(post_id: str, status: str, media_urls: list[str], instagram_media_id: str = None, post_url: str = None, error_message: str = None, carousel_data: dict = None):
     """Updates the database record status and details via direct REST PATCH call."""
     if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY or post_id == "mock-post-uuid-12345":
         print(f"[Database] Mock update for record {post_id} -> status: {status}")
@@ -153,8 +232,11 @@ def update_instagram_post_db(post_id: str, status: str, media_urls: list[str], i
     payload = {
         "status": status,
         "media_urls": media_urls,
-        "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
+        "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "logs": LOGS
     }
+    if carousel_data is not None:
+        payload["carousel_data"] = carousel_data
     if instagram_media_id is not None:
         payload["instagram_media_id"] = instagram_media_id
     if post_url is not None:
@@ -245,22 +327,36 @@ def publish_to_instagram(caption: str, image_urls: list[str]) -> dict:
     }
 
 async def run_agent():
-    print("=" * 60)
-    print("Starting Squirryfy Instagram Content Orchestration Agent...")
-    print("=" * 60)
+    global post_id
+    
+    # 1. Fetch top daily signal ID first
+    print("Selecting top daily signal from database...")
+    signal_id = get_top_daily_signal()
+    
+    # 2. Create the PENDING database record immediately
+    print(f"Creating PENDING database record for Signal ID: {signal_id}...")
+    post_id = create_instagram_post_db(signal_id, "PENDING", {})
+    
+    log_info("=" * 60)
+    log_info("Starting Squirryfy Instagram Content Orchestration Agent...")
+    log_info(f"Active Post ID: {post_id}")
+    log_info(f"Targeting Signal ID: {signal_id}")
+    log_info("=" * 60)
     
     # Verify mandatory API keys
     if not SQUIRRY_API_KEY:
-        print("[ERROR] SQUIRRY_API_KEY environment variable is not defined.")
+        log_error("SQUIRRY_API_KEY environment variable is not defined.")
+        update_instagram_post_db(post_id, "FAILED", [], error_message="Missing SQUIRRY_API_KEY")
         sys.exit(1)
     if not GEMINI_API_KEY:
-        print("[ERROR] GEMINI_API_KEY environment variable is not defined.")
+        log_error("GEMINI_API_KEY environment variable is not defined.")
+        update_instagram_post_db(post_id, "FAILED", [], error_message="Missing GEMINI_API_KEY")
         sys.exit(1)
         
     mcp_transport = os.getenv("MCP_TRANSPORT", "stdio")
     
     if mcp_transport == "stdio":
-        print("Connecting to local Squirryfy MCP Server over Stdio...")
+        log_info("Connecting to local Squirryfy MCP Server over Stdio...")
         mcp_servers = [
             types.McpStdioServer(
                 name="squirryfy",
@@ -270,7 +366,7 @@ async def run_agent():
         ]
     else:
         mcp_url = f"{SQUIRRY_BASE_URL}/api/mcp"
-        print(f"Connecting to Next.js MCP Server at: {mcp_url} (SSE)")
+        log_info(f"Connecting to Next.js MCP Server at: {mcp_url} (SSE)")
         mcp_servers = [
             types.McpStreamableHttpServer(
                 name="squirryfy",
@@ -286,8 +382,8 @@ async def run_agent():
             enable_subagents=False
         ),
         system_instructions=(
-            "You are the Squirryfy Creative Director. Your job is to find the top daily signal "
-            "via your MCP tools, fetch its Squirry AI analysis, and generate a visually stunning "
+            "You are the Squirryfy Creative Director. Your job is to fetch the Squirry AI analysis "
+            "for the target signal using get_squirry_analysis, and generate a visually stunning "
             "and highly engaging Instagram Carousel Deck (5 to 7 slides) detailing the trend. "
             "Generate the copywriting script (a captions with hashtags) and slide layouts yourself. "
             "Output the final carousel deck structure matching the CarouselDeck schema "
@@ -295,75 +391,78 @@ async def run_agent():
         )
     )
     
-    # 1. Generate content using the Creator Agent
-    async with Agent(config) as agent:
-        today_str = datetime.date.today().strftime("%Y-%m-%d")
-        yesterday_str = (datetime.date.today() - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-        
-        prompt = (
-            f"Please fetch the daily signals for today ({today_str}) or yesterday ({yesterday_str}) "
-            "if today's list is empty. Pick the top-scoring signal and call get_squirry_analysis for it. "
-            "Then, create a CarouselDeck structure. You must output the result in JSON inside a single "
-            "```json ... ``` code block. The JSON must exactly match the CarouselDeck schema:\n"
-            "{\n"
-            "  \"signal_id\": \"string\",\n"
-            "  \"caption\": \"string\",\n"
-            "  \"slides\": [\n"
-            "    {\n"
-            "      \"slide_number\": 1,\n"
-            "      \"title\": \"string\",\n"
-            "      \"body\": \"string\",\n"
-            "      \"bg_theme\": \"dark-cyberpunk\" | \"neon-emerald\" | \"clean-minimal\" | \"royal-gold\" | \"blue-gradient\",\n"
-            "      \"image_prompt\": \"string\",\n"
-            "      \"layout_style\": \"centered\" | \"left-split\" | \"two-column\" | \"bottom-docked\"\n"
-            "    }\n"
-            "  ]\n"
-            "}"
-        )
-        
-        print("\n[Creative Director] Orchestrating creative analysis...")
-        response = await agent.chat(prompt)
-        response_text = await response.text()
-        
-        print("\n[Creative Director] Parsing structured output...")
-        try:
+    # 3. Generate content using the Creator Agent
+    deck = None
+    try:
+        async with Agent(config) as agent:
+            prompt = (
+                f"Please call get_squirry_analysis for the signal with ID '{signal_id}'. "
+                "Then, create a CarouselDeck structure. You must output the result in JSON inside a single "
+                "```json ... ``` code block. The JSON must exactly match the CarouselDeck schema:\n"
+                "{\n"
+                "  \"signal_id\": \"string\",\n"
+                "  \"caption\": \"string\",\n"
+                "  \"slides\": [\n"
+                "    {\n"
+                "      \"slide_number\": 1,\n"
+                "      \"title\": \"string\",\n"
+                "      \"body\": \"string\",\n"
+                "      \"bg_theme\": \"dark-cyberpunk\" | \"neon-emerald\" | \"clean-minimal\" | \"royal-gold\" | \"blue-gradient\",\n"
+                "      \"image_prompt\": \"string\",\n"
+                "      \"layout_style\": \"centered\" | \"left-split\" | \"two-column\" | \"bottom-docked\"\n"
+                "    }\n"
+                "  ]\n"
+                "}"
+            )
+            
+            log_info("Orchestrating creative analysis with Gemini...")
+            response = await agent.chat(prompt)
+            response_text = await response.text()
+            
+            log_info("Parsing structured CarouselDeck response...")
             deck_dict = extract_json_block(response_text)
             deck = CarouselDeck.model_validate(deck_dict)
-        except Exception as e:
-            print(f"[ERROR] Failed to extract or validate CarouselDeck: {e}")
-            print(f"Agent response was: {response_text}")
-            return
             
-        print(f"\n[Creative Director] Success! Generated carousel for Signal ID: {deck.signal_id}")
-        print(f"Caption: {deck.caption}\n")
+            log_info(f"Creative generation success for Signal ID: {deck.signal_id}")
+            log_info(f"Copywriting Caption: {deck.caption}")
+    except Exception as e:
+        log_error(f"Failed to generate or validate CarouselDeck: {e}")
+        update_instagram_post_db(post_id, "FAILED", [], error_message=f"Agent error: {str(e)}")
+        return
+
+    # Update database record with parsed carousel_data
+    update_instagram_post_db(post_id, "PENDING", [], carousel_data=deck.model_dump())
         
-    # --- Beyond this point, we do not require the Agent anymore ---
-    
-    # 2. Create database PENDING record directly
-    print("[Database] Creating PENDING post record...")
-    post_id = create_instagram_post_db(deck.signal_id, "PENDING", deck.model_dump())
-    print(f"[Database] Post ID created: {post_id}")
-    
-    # 3. Render each slide locally to JPEG
-    print("\n[Renderer] Generating slides locally via Playwright...")
+    # 4. Render each slide locally to JPEG
+    log_info("Generating slides locally via Playwright...")
     slide_paths = []
-    for slide in deck.slides:
-        filename = f"slide_{deck.signal_id}_{slide.slide_number}.jpg"
-        output_path = os.path.join(OUTPUT_DIR, filename)
-        print(f"[Renderer] Rendering Slide {slide.slide_number}/{len(deck.slides)} -> {output_path}")
-        await render_slide_to_image(slide, len(deck.slides), output_path)
-        slide_paths.append((slide.slide_number, filename, output_path))
+    try:
+        for slide in deck.slides:
+            filename = f"slide_{deck.signal_id}_{slide.slide_number}.jpg"
+            output_path = os.path.join(OUTPUT_DIR, filename)
+            log_info(f"Rendering Slide {slide.slide_number}/{len(deck.slides)} -> {filename}")
+            await render_slide_to_image(slide, len(deck.slides), output_path)
+            slide_paths.append((slide.slide_number, filename, output_path))
+    except Exception as e:
+        log_error(f"Failed during slide rendering: {e}")
+        update_instagram_post_db(post_id, "FAILED", [], error_message=f"Rendering error: {str(e)}")
+        return
         
-    # 4. Upload images directly to Supabase Storage
-    print("\n[Database] Uploading slide images directly to Supabase Storage...")
+    # 5. Upload images directly to Supabase Storage
+    log_info("Uploading slide images directly to Supabase Storage...")
     cdn_urls = []
-    for slide_num, filename, local_path in slide_paths:
-        public_url = upload_slide_to_storage(local_path, filename)
-        print(f"[Database] Slide {slide_num} uploaded: {public_url}")
-        cdn_urls.append(public_url)
+    try:
+        for slide_num, filename, local_path in slide_paths:
+            public_url = upload_slide_to_storage(local_path, filename)
+            log_info(f"Slide {slide_num} uploaded successfully: {public_url}")
+            cdn_urls.append(public_url)
+    except Exception as e:
+        log_error(f"Failed to upload slide images: {e}")
+        update_instagram_post_db(post_id, "FAILED", [], error_message=f"Upload error: {str(e)}")
+        return
         
-    # 5. Publish to Instagram via Meta Graph API
-    print("\n[Publisher] Publishing to Instagram...")
+    # 6. Publish to Instagram via Meta Graph API
+    log_info("Publishing to Instagram...")
     post_status = "GENERATED"
     error_message = None
     instagram_media_id = None
@@ -375,18 +474,21 @@ async def run_agent():
             post_status = "PUBLISHED"
             instagram_media_id = pub_res.get("instagram_media_id")
             post_url = pub_res.get("post_url")
+            log_info(f"Published successfully! Live link: {post_url}")
         elif pub_res.get("dry_run"):
             post_status = "GENERATED"
+            log_info("Dry Run Mode: Slides created but Meta API publish skipped (missing credentials).")
         else:
             post_status = "FAILED"
             error_message = pub_res.get("error", "Unknown error")
+            log_error(f"Publishing failed: {error_message}")
     except Exception as e:
-        print(f"[Publisher] Publishing failed: {str(e)}")
+        log_error(f"Publishing exception: {str(e)}")
         post_status = "FAILED"
         error_message = str(e)
         
-    # 6. Update database record with final details
-    print(f"\n[Database] Updating post record {post_id} status to {post_status}...")
+    # 7. Update database record with final details
+    log_info(f"Updating database status to {post_status}...")
     update_instagram_post_db(
         post_id=post_id,
         status=post_status,
@@ -395,10 +497,9 @@ async def run_agent():
         post_url=post_url,
         error_message=error_message
     )
-    print("[Database] Post record updated successfully!")
-    print("=" * 60)
-    print("Squirryfy Content Agent Run Completed Successfully.")
-    print("=" * 60)
+    log_info("=" * 60)
+    log_info("Squirryfy Content Agent Run Completed Successfully.")
+    log_info("=" * 60)
 
 if __name__ == "__main__":
     asyncio.run(run_agent())
