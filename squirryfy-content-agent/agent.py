@@ -90,6 +90,43 @@ def extract_json_block(text: str) -> dict:
         
     raise ValueError(f"Could not find any JSON object in text: {text}")
 
+def get_model_sort_key(name: str):
+    match = re.search(r"gemini-(\d+(?:\.\d+)*)-flash", name)
+    if not match:
+        return (0,)
+    return tuple(int(x) for x in match.group(1).split("."))
+
+def get_latest_flash_model(api_key: str) -> str | None:
+    if not api_key:
+        return None
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
+        response = requests.get(url, timeout=5)
+        if response.status_code != 200:
+            return None
+        data = response.json()
+        models = data.get("models", [])
+        if not isinstance(models, list):
+            return None
+        
+        flash_models = []
+        for m in models:
+            name = m.get("name", "").replace("models/", "")
+            if (name.startswith("gemini-") and 
+                name.endswith("-flash") and 
+                "experimental" not in name and 
+                "tuning" not in name):
+                flash_models.append(name)
+                
+        if not flash_models:
+            return None
+            
+        flash_models.sort(key=get_model_sort_key, reverse=True)
+        return flash_models[0]
+    except Exception as e:
+        print(f"[Model Discovery Warning] Failed to fetch latest Gemini models list: {e}")
+        return None
+
 # --- Direct Supabase DB & Storage REST Operations ---
 
 def get_top_daily_signal() -> str:
@@ -375,8 +412,26 @@ async def run_agent():
             )
         ]
     
+    # Resolve the model name
+    # 1. First choice: Try dynamic discovery
+    model_name = get_latest_flash_model(GEMINI_API_KEY)
+    
+    if model_name:
+        log_info(f"Dynamically resolved latest Gemini flash model: {model_name}")
+    else:
+        # 2. Second choice: Fallback to environment variable
+        model_name = os.getenv("DEFAULT_GEMINI_MODEL")
+        if model_name:
+            log_info(f"Dynamic lookup failed. Using environment variable fallback: {model_name}")
+            
+    if not model_name:
+        # 3. Third choice: Fallback to default
+        model_name = "gemini-3.5-flash"
+        log_info(f"Dynamic and env lookups failed. Using default baseline: {model_name}")
+
     # Configure the Creator Agent (subagents disabled for speed and parse reliability)
     config = LocalAgentConfig(
+        model=model_name,
         mcp_servers=mcp_servers,
         capabilities=types.CapabilitiesConfig(
             enable_subagents=False

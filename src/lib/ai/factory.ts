@@ -30,7 +30,24 @@ async function getLatestFlashModel(apiKey: string): Promise<string | null> {
     if (flashModels.length === 0) return null;
     
     // Sort models so that the highest version comes first (e.g. gemini-2.5-flash, gemini-1.5-flash)
-    flashModels.sort((a: string, b: string) => b.localeCompare(a));
+    flashModels.sort((a: string, b: string) => {
+      const getVersionKey = (name: string): number[] => {
+        const match = name.match(/gemini-(\d+(?:\.\d+)*)-flash/);
+        return match ? match[1].split('.').map(Number) : [0];
+      };
+      
+      const keyA = getVersionKey(a);
+      const keyB = getVersionKey(b);
+      
+      for (let i = 0; i < Math.max(keyA.length, keyB.length); i++) {
+        const valA = keyA[i] || 0;
+        const valB = keyB[i] || 0;
+        if (valA !== valB) {
+          return valB - valA;
+        }
+      }
+      return 0;
+    });
     
     console.log(`[LLMFactory] Dynamically resolved latest Gemini flash model: ${flashModels[0]}`);
     return flashModels[0];
