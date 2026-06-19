@@ -652,7 +652,7 @@ export default function DashboardPage() {
                     .filter(run => run.status === 'COMPLETED')
                     .map(run => (
                       <option key={run.id} value={run.id}>
-                        {new Date(run.startedAt).toLocaleDateString()} - {run.id.substring(0, 8)}
+                        {new Date(run.startedAt).toLocaleDateString()} - {run.id.substring(0, 8)} ({run.finalSignalsGeneratedCount} signals)
                       </option>
                     ))
                   }
