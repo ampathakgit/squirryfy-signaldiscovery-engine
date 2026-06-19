@@ -1,9 +1,8 @@
 import { LLMProvider } from './types';
 import { GeminiProvider } from './GeminiProvider';
 
-async function getLatestFlashModel(apiKey: string): Promise<string> {
-  const defaultModel = 'gemini-2.5-flash';
-  if (!apiKey) return defaultModel;
+async function getLatestFlashModel(apiKey: string): Promise<string | null> {
+  if (!apiKey) return null;
   
   try {
     const controller = new AbortController();
@@ -14,10 +13,10 @@ async function getLatestFlashModel(apiKey: string): Promise<string> {
     });
     clearTimeout(timeoutId);
     
-    if (!response.ok) return defaultModel;
+    if (!response.ok) return null;
     
     const data = await response.json();
-    if (!data.models || !Array.isArray(data.models)) return defaultModel;
+    if (!data.models || !Array.isArray(data.models)) return null;
     
     const flashModels = data.models
       .map((m: any) => m.name.replace('models/', ''))
@@ -28,7 +27,7 @@ async function getLatestFlashModel(apiKey: string): Promise<string> {
         !name.includes('tuning')
       );
       
-    if (flashModels.length === 0) return defaultModel;
+    if (flashModels.length === 0) return null;
     
     // Sort models so that the highest version comes first (e.g. gemini-2.5-flash, gemini-1.5-flash)
     flashModels.sort((a: string, b: string) => b.localeCompare(a));
@@ -36,8 +35,8 @@ async function getLatestFlashModel(apiKey: string): Promise<string> {
     console.log(`[LLMFactory] Dynamically resolved latest Gemini flash model: ${flashModels[0]}`);
     return flashModels[0];
   } catch (e) {
-    console.warn('[LLMFactory] Failed to fetch latest Gemini models list, using default fallback:', e);
-    return defaultModel;
+    console.warn('[LLMFactory] Failed to fetch latest Gemini models list:', e);
+    return null;
   }
 }
 
@@ -52,9 +51,21 @@ export class LLMFactory {
           console.warn('[LLMFactory] WARNING: GEMINI_API_KEY is not defined in environment variables.');
         }
         
-        let modelName = process.env.DEFAULT_GEMINI_MODEL;
+        // 1. First choice: Try dynamic discovery
+        let modelName = await getLatestFlashModel(apiKey);
+        
         if (!modelName) {
-          modelName = await getLatestFlashModel(apiKey);
+          // 2. Second choice: Fallback to environment variable
+          modelName = process.env.DEFAULT_GEMINI_MODEL || '';
+          if (modelName) {
+            console.log(`[LLMFactory] Dynamic lookup failed. Using environment variable fallback: ${modelName}`);
+          }
+        }
+        
+        if (!modelName) {
+          // 3. Third choice: Fallback to hardcoded safe baseline
+          modelName = 'gemini-2.5-flash';
+          console.log(`[LLMFactory] Dynamic and env lookups failed. Using hardcoded safe baseline: ${modelName}`);
         }
         
         return new GeminiProvider(apiKey, modelName);
