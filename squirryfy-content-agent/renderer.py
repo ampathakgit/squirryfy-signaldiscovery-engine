@@ -34,7 +34,7 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
             with open(bg_path, "rb") as image_file:
                 encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
             bg_data_url = f"data:image/jpeg;base64,{encoded_string}"
-            background_style = f"background-image: linear-gradient(rgba(13, 27, 42, 0.75), rgba(13, 27, 42, 0.9)), url('{bg_data_url}'); background-size: cover; background-position: center;"
+            background_style = f"background-image: linear-gradient(rgba(13, 27, 42, 0.2), rgba(13, 27, 42, 0.5)), url('{bg_data_url}'); background-size: cover; background-position: center;"
         except Exception as e:
             print(f"[Renderer Warning] Failed to convert background to base64: {e}")
             gradient = THEME_GRADIENTS.get("dark-cyberpunk")
@@ -212,9 +212,9 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
             
             /* Glassmorphic main container */
             .main-card {{
-                background: rgba(13, 27, 42, 0.6);
-                backdrop-filter: blur(25px);
-                -webkit-backdrop-filter: blur(25px);
+                background: rgba(13, 27, 42, 0.25);
+                backdrop-filter: blur(4px);
+                -webkit-backdrop-filter: blur(4px);
                 border: 1px solid rgba(255, 255, 255, 0.08);
                 border-radius: 40px;
                 padding: 80px 64px;
