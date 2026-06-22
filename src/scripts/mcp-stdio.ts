@@ -113,14 +113,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       throw new Error("Missing signal_id parameter.");
     }
     const { data, error } = await supabase.from('discovery_final_signals')
-      .select('squirry_response')
+      .select('signal_id, title, canonical_url, squirry_response')
       .eq('signal_id', signalId)
       .single();
       
     if (error) {
       throw new Error(`Database error: ${error.message}`);
     }
-    return { content: [{ type: "text", text: JSON.stringify(data?.squirry_response || null) }] };
+    return { content: [{ type: "text", text: JSON.stringify(data || null) }] };
   }
 
   if (name === "create_instagram_post") {

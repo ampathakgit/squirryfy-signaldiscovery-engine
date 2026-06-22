@@ -29,8 +29,16 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
 
     # Resolve background styling
     if bg_path and os.path.exists(bg_path):
-        bg_url = bg_path.replace("\\", "/")
-        background_style = f"background-image: linear-gradient(rgba(13, 27, 42, 0.75), rgba(13, 27, 42, 0.9)), url('file:///{bg_url}'); background-size: cover; background-position: center;"
+        import base64
+        try:
+            with open(bg_path, "rb") as image_file:
+                encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+            bg_data_url = f"data:image/jpeg;base64,{encoded_string}"
+            background_style = f"background-image: linear-gradient(rgba(13, 27, 42, 0.75), rgba(13, 27, 42, 0.9)), url('{bg_data_url}'); background-size: cover; background-position: center;"
+        except Exception as e:
+            print(f"[Renderer Warning] Failed to convert background to base64: {e}")
+            gradient = THEME_GRADIENTS.get("dark-cyberpunk")
+            background_style = f"background: {gradient};"
     else:
         gradient = THEME_GRADIENTS.get("dark-cyberpunk")
         background_style = f"background: {gradient};"

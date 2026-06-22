@@ -778,7 +778,11 @@ async def run_agent(run_id: str = None, signal_id: str = None, dry_run: bool = F
             async with Agent(config) as agent:
                 prompt = (
                     f"Please call get_squirry_analysis for the signal with ID '{target_signal_id}' to retrieve the source data.\n\n"
-                    "Then, transform this data into a premium Instagram carousel. Apply the following design system, storytelling rules, and output structure:\n\n"
+                    "Note: The tool returns a JSON object containing the target signal's 'title', 'canonical_url', and 'squirry_response'. "
+                    "You must analyze the returned 'squirry_response'. If 'squirry_response' is null or missing, you must use the "
+                    "signal's 'title' and 'canonical_url' to perform a web search (using the search_web tool) to fetch the context of that exact story "
+                    "and construct the creative storyboard yourself! Under no circumstances should you write about a different, unrelated topic.\n\n"
+                    "Transform this specific story data into a premium Instagram carousel. Apply the following design system, storytelling rules, and output structure:\n\n"
                     "────────────────────────────\n"
                     "OBJECTIVE\n"
                     "────────────────────────────\n"
