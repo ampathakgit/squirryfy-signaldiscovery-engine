@@ -1,23 +1,24 @@
 import supabase from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { getUtcBounds } from '@/lib/date-utils';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const dateParam = searchParams.get('date'); // Format: YYYY-MM-DD
+  const timezoneOffsetParam = searchParams.get('timezoneOffset'); // in minutes
 
   if (!dateParam) {
     return NextResponse.json({ error: 'Missing date parameter. Format must be YYYY-MM-DD' }, { status: 400 });
   }
 
   try {
-    const dateStart = new Date(`${dateParam}T00:00:00.000Z`);
-    const dateEnd = new Date(`${dateParam}T23:59:59.999Z`);
+    const { dateStart, dateEnd } = getUtcBounds(dateParam, timezoneOffsetParam);
 
     const { data: finalSignals, error } = await supabase
       .from('discovery_final_signals')
       .select('*')
-      .gte('created_at', dateStart.toISOString())
-      .lte('created_at', dateEnd.toISOString())
+      .gte('created_at', dateStart)
+      .lte('created_at', dateEnd)
       .eq('ready_for_squirry_analysis', true)
       .order('score', { ascending: false });
 

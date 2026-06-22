@@ -73,6 +73,7 @@ export default function DashboardPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedRunFilter, setSelectedRunFilter] = useState<string>('all');
   const [finalSignals, setFinalSignals] = useState<any[]>([]);
+  const [hideEmptyRuns, setHideEmptyRuns] = useState<boolean>(true);
 
   // Edit keywords states
   const [editingConfig, setEditingConfig] = useState<{ rId: string; cId: string } | null>(null);
@@ -136,6 +137,7 @@ export default function DashboardPage() {
         params.append('startDate', filterStartDate);
         params.append('endDate', filterEndDate);
       }
+      params.append('timezoneOffset', new Date().getTimezoneOffset().toString());
       const queryStr = params.toString();
       if (queryStr) {
         url += `?${queryStr}`;
@@ -188,6 +190,7 @@ export default function DashboardPage() {
           params.append('startDate', filterStartDate);
           params.append('endDate', filterEndDate);
         }
+        params.append('timezoneOffset', new Date().getTimezoneOffset().toString());
       }
       const resp = await fetch(`/api/signals/final?${params.toString()}`);
       if (resp.ok) {
@@ -204,7 +207,7 @@ export default function DashboardPage() {
   const fetchExport = async () => {
     setIsExporting(true);
     try {
-      const resp = await fetch(`/api/squirry/export?date=${exportDate}`);
+      const resp = await fetch(`/api/squirry/export?date=${exportDate}&timezoneOffset=${new Date().getTimezoneOffset().toString()}`);
       if (resp.ok) {
         const data = await resp.json();
         setExportJson(data);
@@ -227,6 +230,7 @@ export default function DashboardPage() {
         params.append('startDate', filterStartDate);
         params.append('endDate', filterEndDate);
       }
+      params.append('timezoneOffset', new Date().getTimezoneOffset().toString());
       
       if (selectedRegion && selectedRegion !== 'all') {
         params.append('region', selectedRegion);
@@ -406,6 +410,7 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    setSelectedRunFilter('all');
     fetchConfigs();
     fetchRuns();
   }, [filterMode, filterDate, filterStartDate, filterEndDate]);
@@ -784,6 +789,21 @@ export default function DashboardPage() {
                 ))}
               </select>
             </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] text-neutral-500 uppercase tracking-wider font-semibold">Run Filter</label>
+              <button
+                onClick={() => setHideEmptyRuns(!hideEmptyRuns)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 cursor-pointer ${
+                  hideEmptyRuns
+                    ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/25'
+                    : 'bg-neutral-950 text-neutral-400 border-neutral-800 hover:bg-neutral-900/30'
+                }`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${hideEmptyRuns ? 'bg-cyan-400 animate-pulse' : 'bg-neutral-600'}`} />
+                {hideEmptyRuns ? 'Hide 0-Count Runs' : 'Show All Runs'}
+              </button>
+            </div>
           </div>
         </section>
 
@@ -831,27 +851,31 @@ export default function DashboardPage() {
                   <div className="divide-y divide-neutral-900 max-h-[600px] overflow-y-auto">
                     {runs.length === 0 ? (
                       <div className="p-8 text-center text-neutral-500 text-sm">No discovery runs found. Trigger a run above!</div>
+                    ) : runs.filter(run => !hideEmptyRuns || run.finalSignalsGeneratedCount > 0 || run.status === 'RUNNING' || run.status === 'PENDING' || run.id === selectedRun?.id).length === 0 ? (
+                      <div className="p-8 text-center text-neutral-500 text-sm">No runs with signals found. Toggle 'Show All Runs' or trigger a run!</div>
                     ) : (
-                      runs.map(run => (
-                        <button
-                          key={run.id}
-                          onClick={() => fetchSingleRun(run.id)}
-                          className={`w-full text-left p-4 hover:bg-neutral-900/50 transition-all flex items-center justify-between ${selectedRun?.id === run.id ? 'bg-cyan-950/15 border-l-2 border-cyan-500' : ''}`}
-                        >
-                          <div className="truncate pr-2">
-                            <p className="text-xs font-mono text-neutral-400 truncate">{run.id}</p>
-                            <p className="text-xs text-neutral-500 mt-1">Started: {new Date(run.startedAt).toLocaleString()}</p>
-                          </div>
-                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${run.status === 'COMPLETED' ? 'bg-emerald-950 text-emerald-400 border border-emerald-900' : run.status === 'FAILED' ? 'bg-red-950 text-red-400 border border-red-900' : 'bg-cyan-950 text-cyan-400 border border-cyan-900'}`}>
-                              {run.status}
-                            </span>
-                            {run.status === 'COMPLETED' && (
-                              <span className="text-[10px] text-neutral-400 font-semibold">{run.finalSignalsGeneratedCount} signals</span>
-                            )}
-                          </div>
-                        </button>
-                      ))
+                      runs
+                        .filter(run => !hideEmptyRuns || run.finalSignalsGeneratedCount > 0 || run.status === 'RUNNING' || run.status === 'PENDING' || run.id === selectedRun?.id)
+                        .map(run => (
+                          <button
+                            key={run.id}
+                            onClick={() => fetchSingleRun(run.id)}
+                            className={`w-full text-left p-4 hover:bg-neutral-900/50 transition-all flex items-center justify-between ${selectedRun?.id === run.id ? 'bg-cyan-950/15 border-l-2 border-cyan-500' : ''}`}
+                          >
+                            <div className="truncate pr-2">
+                              <p className="text-xs font-mono text-neutral-400 truncate">{run.id}</p>
+                              <p className="text-xs text-neutral-500 mt-1">Started: {new Date(run.startedAt).toLocaleString()}</p>
+                            </div>
+                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${run.status === 'COMPLETED' ? 'bg-emerald-950 text-emerald-400 border border-emerald-900' : run.status === 'FAILED' ? 'bg-red-950 text-red-400 border border-red-900' : 'bg-cyan-950 text-cyan-400 border border-cyan-900'}`}>
+                                {run.status}
+                              </span>
+                              {run.status === 'COMPLETED' && (
+                                <span className="text-[10px] text-neutral-400 font-semibold">{run.finalSignalsGeneratedCount} signals</span>
+                              )}
+                            </div>
+                          </button>
+                        ))
                     )}
                   </div>
                 </div>
@@ -958,11 +982,14 @@ export default function DashboardPage() {
                       className="bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-1.5 text-xs text-white font-medium focus:outline-none focus:border-cyan-500 max-w-[260px]"
                     >
                       <option value="all">All Runs (Overall Top)</option>
-                      {runs.map(run => (
-                        <option key={run.id} value={run.id}>
-                          {new Date(run.startedAt).toLocaleDateString()} - {run.id.substring(0, 8)} ({run.finalSignalsGeneratedCount} sigs)
-                        </option>
-                      ))}
+                      {runs
+                        .filter(run => !hideEmptyRuns || run.finalSignalsGeneratedCount > 0 || run.status === 'RUNNING' || run.status === 'PENDING' || run.id === selectedRunFilter)
+                        .map(run => (
+                          <option key={run.id} value={run.id}>
+                            {new Date(run.startedAt).toLocaleDateString()} - {run.id.substring(0, 8)} ({run.finalSignalsGeneratedCount} sigs)
+                          </option>
+                        ))
+                      }
                     </select>
                   </div>
 

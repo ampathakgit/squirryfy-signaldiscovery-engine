@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import supabase from "@/lib/db";
+import { getUtcBounds, getUtcRangeBounds } from "@/lib/date-utils";
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +10,7 @@ export async function GET(request: NextRequest) {
     const dateParam = searchParams.get("date");
     const startDateParam = searchParams.get("startDate");
     const endDateParam = searchParams.get("endDate");
+    const timezoneOffsetParam = searchParams.get("timezoneOffset"); // in minutes
     const region = searchParams.get("region");
     const category = searchParams.get("category");
 
@@ -28,13 +30,11 @@ export async function GET(request: NextRequest) {
 
     // 1. Date filtering
     if (dateParam) {
-      const dateStart = new Date(`${dateParam}T00:00:00.000Z`);
-      const dateEnd = new Date(`${dateParam}T23:59:59.999Z`);
-      query = query.gte("created_at", dateStart.toISOString()).lte("created_at", dateEnd.toISOString());
+      const { dateStart, dateEnd } = getUtcBounds(dateParam, timezoneOffsetParam);
+      query = query.gte("created_at", dateStart).lte("created_at", dateEnd);
     } else if (startDateParam && endDateParam) {
-      const dateStart = new Date(`${startDateParam}T00:00:00.000Z`);
-      const dateEnd = new Date(`${endDateParam}T23:59:59.999Z`);
-      query = query.gte("created_at", dateStart.toISOString()).lte("created_at", dateEnd.toISOString());
+      const { dateStart, dateEnd } = getUtcRangeBounds(startDateParam, endDateParam, timezoneOffsetParam);
+      query = query.gte("created_at", dateStart).lte("created_at", dateEnd);
     }
 
     // 2. Region filtering (on joined table)

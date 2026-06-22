@@ -1,5 +1,6 @@
 import supabase from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { getUtcBounds, getUtcRangeBounds } from '@/lib/date-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,6 +9,7 @@ export async function GET(request: NextRequest) {
   const dateParam = searchParams.get('date'); // YYYY-MM-DD
   const startDateParam = searchParams.get('startDate'); // YYYY-MM-DD
   const endDateParam = searchParams.get('endDate'); // YYYY-MM-DD
+  const timezoneOffsetParam = searchParams.get('timezoneOffset'); // in minutes
 
   try {
     let query = supabase
@@ -15,18 +17,16 @@ export async function GET(request: NextRequest) {
       .select('*');
 
     if (dateParam) {
-      const dateStart = `${dateParam}T00:00:00.000Z`;
-      const dateEnd = `${dateParam}T23:59:59.999Z`;
+      const { dateStart, dateEnd } = getUtcBounds(dateParam, timezoneOffsetParam);
       query = query.gte('started_at', dateStart).lte('started_at', dateEnd);
     } else if (startDateParam && endDateParam) {
-      const dateStart = `${startDateParam}T00:00:00.000Z`;
-      const dateEnd = `${endDateParam}T23:59:59.999Z`;
+      const { dateStart, dateEnd } = getUtcRangeBounds(startDateParam, endDateParam, timezoneOffsetParam);
       query = query.gte('started_at', dateStart).lte('started_at', dateEnd);
     }
 
     const { data: runs, error } = await query
       .order('created_at', { ascending: false })
-      .limit(50);
+      .limit(200);
 
     if (error) throw error;
 
