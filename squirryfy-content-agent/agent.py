@@ -492,6 +492,31 @@ def get_all_daily_signals(run_id: str = None) -> list[str]:
         
     return []
 
+def check_squirry_response_exists(signal_id: str) -> bool:
+    """Checks the database directly to verify if squirry_response is present and non-null for a signal."""
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
+        # Local mock fallback
+        return True
+    url = f"{SUPABASE_URL}/rest/v1/discovery_final_signals"
+    headers = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}"
+    }
+    params = {
+        "signal_id": f"eq.{signal_id}",
+        "select": "squirry_response"
+    }
+    try:
+        res = requests.get(url, headers=headers, params=params)
+        if res.status_code == 200:
+            data = res.json()
+            if data and len(data) > 0:
+                resp = data[0].get("squirry_response")
+                return resp is not None
+    except Exception as e:
+        print(f"[Database Warning] Failed to check squirry_response: {e}")
+    return False
+
 def create_instagram_post_db(signal_id: str, status: str, carousel_data: dict) -> str:
     """Creates a post entry in the Supabase instagram_posts table via direct PostgREST call."""
     if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
@@ -772,6 +797,12 @@ async def run_agent(run_id: str = None, signal_id: str = None, dry_run: bool = F
         log_info(f"Targeting Signal ID: {target_signal_id}")
         log_info("=" * 60)
         
+        # Pre-flight Squirry check
+        if not check_squirry_response_exists(target_signal_id):
+            log_error(f"Squirry response is missing for signal {target_signal_id}. Content generation requires Squirry data.")
+            update_instagram_post_db(post_id, "FAILED", [], error_message="Squirry response is missing for this signal. Content generation requires Squirry data.")
+            continue
+        
         # 3. Generate content using the Creator Agent
         deck = None
         try:
@@ -779,9 +810,7 @@ async def run_agent(run_id: str = None, signal_id: str = None, dry_run: bool = F
                 prompt = (
                     f"Please call get_squirry_analysis for the signal with ID '{target_signal_id}' to retrieve the source data.\n\n"
                     "Note: The tool returns a JSON object containing the target signal's 'title', 'canonical_url', and 'squirry_response'. "
-                    "You must analyze the returned 'squirry_response'. If 'squirry_response' is null or missing, you must use the "
-                    "signal's 'title' and 'canonical_url' to perform a web search (using the search_web tool) to fetch the context of that exact story "
-                    "and construct the creative storyboard yourself! Under no circumstances should you write about a different, unrelated topic.\n\n"
+                    "You must analyze the returned 'squirry_response' and construct the creative storyboard from it.\n\n"
                     "Transform this specific story data into a premium Instagram carousel. Apply the following design system, storytelling rules, and output structure:\n\n"
                     "────────────────────────────\n"
                     "OBJECTIVE\n"

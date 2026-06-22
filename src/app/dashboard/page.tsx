@@ -286,11 +286,91 @@ export default function DashboardPage() {
 
   // Trigger Instagram Agent
   const triggerInstagramAgent = async () => {
-    const runLabel = selectedInstagramRunId ? `Run ID ${selectedInstagramRunId}` : 'the latest completed run';
-    const isConfirmed = window.confirm(`Are you sure you want to trigger the Squirryfy Instagram Creator Agent using ${runLabel}? This will process the top trend and generate slide carousels in the background.`);
-    if (!isConfirmed) return;
-    
     setIsTriggeringInstagram(true);
+    let targetSignalId = null;
+    let targetTitle = '';
+    let hasSquirry = false;
+
+    try {
+      // Fetch the top signal for this run context first to verify Squirry response
+      const params = new URLSearchParams();
+      if (selectedInstagramRunId && selectedInstagramRunId !== 'all') {
+        params.append('runId', selectedInstagramRunId);
+      } else {
+        // Find latest completed run ID first
+        const runResp = await fetch('/api/discovery/runs?limit=10');
+        if (runResp.ok) {
+          const runsData = await runResp.json();
+          const latestCompleted = runsData.find((r: any) => r.status === 'COMPLETED');
+          if (latestCompleted) {
+            params.append('runId', latestCompleted.id);
+          }
+        }
+      }
+      
+      const sigResp = await fetch(`/api/signals/final?${params.toString()}`);
+      if (sigResp.ok) {
+        const sigs = await sigResp.json();
+        if (sigs && sigs.length > 0) {
+          // The API returns them sorted by score desc, so sigs[0] is the top signal!
+          const topSig = sigs[0];
+          targetSignalId = topSig.signalId;
+          targetTitle = topSig.title;
+          hasSquirry = !!topSig.squirryResponse;
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to pre-fetch top signal, triggering directly:", e);
+    }
+
+    if (!targetSignalId) {
+      alert("No ready signals found for the selected run context. Cannot trigger content generation.");
+      setIsTriggeringInstagram(false);
+      return;
+    }
+
+    if (!hasSquirry) {
+      const enrichConfirm = window.confirm(
+        `Squirry analysis data is currently missing for the top trend: "${targetTitle}".\n\n` +
+        `We need to perform an extra enrichment step by calling the Squirry AI API first before content generation can start. Would you like to proceed?`
+      );
+      if (!enrichConfirm) {
+        setIsTriggeringInstagram(false);
+        return;
+      }
+
+      try {
+        console.log(`[Frontend] Performing manual enrichment for run top signal: ${targetSignalId}`);
+        const enrichResp = await fetch('/api/squirry/enrich', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ signalId: targetSignalId })
+        });
+
+        if (!enrichResp.ok) {
+          const enrichErr = await enrichResp.json().catch(() => ({}));
+          alert(`Squirry enrichment failed: ${enrichErr.error || 'Unknown error'}. Cannot trigger Instagram agent.`);
+          setIsTriggeringInstagram(false);
+          return;
+        }
+
+        alert("Squirry enrichment completed successfully! Now triggering the Instagram Creator Agent...");
+        // Refresh the signals list so dashboard UI updates
+        fetchFinalSignals();
+      } catch (e: any) {
+        alert(`Squirry enrichment error: ${e.message}. Cannot trigger Instagram agent.`);
+        setIsTriggeringInstagram(false);
+        return;
+      }
+    } else {
+      const runLabel = selectedInstagramRunId ? `Run ID ${selectedInstagramRunId}` : 'the latest completed run';
+      const isConfirmed = window.confirm(`Are you sure you want to trigger the Squirryfy Instagram Creator Agent using ${runLabel}? This will process the top trend ("${targetTitle}") and generate slide carousels in the background.`);
+      if (!isConfirmed) {
+        setIsTriggeringInstagram(false);
+        return;
+      }
+    }
+
     try {
       const resp = await fetch('/api/instagram/trigger', {
         method: 'POST',
@@ -315,10 +395,47 @@ export default function DashboardPage() {
 
   // Trigger Instagram Agent for specific signal
   const triggerInstagramAgentForSignal = async (signalId: string, title: string) => {
-    const isConfirmed = window.confirm(`Are you sure you want to trigger the Squirryfy Instagram Creator Agent for signal: "${title}"? This will generate slide carousels in the background.`);
-    if (!isConfirmed) return;
-    
-    setIsTriggeringInstagram(true);
+    // 1. Find the signal from the state to inspect its Squirry response
+    const sig = finalSignals.find(s => s.signalId === signalId);
+    const hasSquirry = sig && sig.squirryResponse;
+
+    if (!hasSquirry) {
+      const enrichConfirm = window.confirm(
+        `Squirry analysis data is currently missing for signal: "${title}".\n\n` +
+        `We need to perform an extra enrichment step by calling the Squirry AI API first before content generation can start. Would you like to proceed?`
+      );
+      if (!enrichConfirm) return;
+
+      setIsTriggeringInstagram(true);
+      try {
+        console.log(`[Frontend] Performing manual enrichment for signal: ${signalId}`);
+        const enrichResp = await fetch('/api/squirry/enrich', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ signalId })
+        });
+
+        if (!enrichResp.ok) {
+          const enrichErr = await enrichResp.json().catch(() => ({}));
+          alert(`Squirry enrichment failed: ${enrichErr.error || 'Unknown error'}. Cannot trigger Instagram agent.`);
+          setIsTriggeringInstagram(false);
+          return;
+        }
+
+        alert("Squirry enrichment completed successfully! Now triggering the Instagram Creator Agent...");
+        // Refresh the signals list so dashboard UI updates
+        fetchFinalSignals();
+      } catch (e: any) {
+        alert(`Squirry enrichment error: ${e.message}. Cannot trigger Instagram agent.`);
+        setIsTriggeringInstagram(false);
+        return;
+      }
+    } else {
+      const isConfirmed = window.confirm(`Are you sure you want to trigger the Squirryfy Instagram Creator Agent for signal: "${title}"? This will generate slide carousels in the background.`);
+      if (!isConfirmed) return;
+      setIsTriggeringInstagram(true);
+    }
+
     setActiveSection('instagram');
     try {
       const resp = await fetch('/api/instagram/trigger', {

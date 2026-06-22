@@ -56,6 +56,7 @@ export async function GET(request: NextRequest) {
       supportingUrls: sig.supporting_urls,
       entities: sig.entities,
       readyForSquirryAnalysis: sig.ready_for_squirry_analysis,
+      squirryResponse: sig.squirry_response,
       runId: sig.run_id,
       clusterId: sig.cluster_id,
       createdAt: sig.created_at,
