@@ -147,13 +147,6 @@ export default function DashboardPage() {
       if (resp.ok) {
         const data = await resp.json();
         setRuns(data || []);
-        if (data.length > 0) {
-          if (!selectedRun || !data.some((r: any) => r.id === selectedRun.id)) {
-            fetchSingleRun(data[0].id);
-          }
-        } else {
-          setSelectedRun(null);
-        }
       }
     } catch (e) {
       console.error(e);
@@ -413,7 +406,27 @@ export default function DashboardPage() {
     setSelectedRunFilter('all');
     fetchConfigs();
     fetchRuns();
-  }, [filterMode, filterDate, filterStartDate, filterEndDate]);
+  }, [filterMode, filterDate, filterStartDate, filterEndDate, hideEmptyRuns]);
+
+  // Reactively auto-select run matching active filters when runs or hideEmptyRuns changes
+  useEffect(() => {
+    if (runs.length === 0) {
+      setSelectedRun(null);
+      return;
+    }
+
+    const filtered = hideEmptyRuns
+      ? runs.filter(run => run.finalSignalsGeneratedCount > 0 || run.status === 'RUNNING' || run.status === 'PENDING')
+      : runs;
+
+    if (filtered.length > 0) {
+      if (!selectedRun || !filtered.some(r => r.id === selectedRun.id)) {
+        fetchSingleRun(filtered[0].id);
+      }
+    } else {
+      setSelectedRun(null);
+    }
+  }, [runs, hideEmptyRuns, selectedRun]);
 
   useEffect(() => {
     fetchFinalSignals();
@@ -801,7 +814,7 @@ export default function DashboardPage() {
                 }`}
               >
                 <span className={`h-1.5 w-1.5 rounded-full ${hideEmptyRuns ? 'bg-cyan-400 animate-pulse' : 'bg-neutral-600'}`} />
-                {hideEmptyRuns ? 'Hide 0-Count Runs' : 'Show All Runs'}
+                {hideEmptyRuns ? 'Show All Runs' : 'Hide 0-Count Runs'}
               </button>
             </div>
           </div>
@@ -851,11 +864,11 @@ export default function DashboardPage() {
                   <div className="divide-y divide-neutral-900 max-h-[600px] overflow-y-auto">
                     {runs.length === 0 ? (
                       <div className="p-8 text-center text-neutral-500 text-sm">No discovery runs found. Trigger a run above!</div>
-                    ) : runs.filter(run => !hideEmptyRuns || run.finalSignalsGeneratedCount > 0 || run.status === 'RUNNING' || run.status === 'PENDING' || run.id === selectedRun?.id).length === 0 ? (
+                    ) : runs.filter(run => !hideEmptyRuns || run.finalSignalsGeneratedCount > 0 || run.status === 'RUNNING' || run.status === 'PENDING').length === 0 ? (
                       <div className="p-8 text-center text-neutral-500 text-sm">No runs with signals found. Toggle 'Show All Runs' or trigger a run!</div>
                     ) : (
                       runs
-                        .filter(run => !hideEmptyRuns || run.finalSignalsGeneratedCount > 0 || run.status === 'RUNNING' || run.status === 'PENDING' || run.id === selectedRun?.id)
+                        .filter(run => !hideEmptyRuns || run.finalSignalsGeneratedCount > 0 || run.status === 'RUNNING' || run.status === 'PENDING')
                         .map(run => (
                           <button
                             key={run.id}
