@@ -492,11 +492,22 @@ def get_all_daily_signals(run_id: str = None) -> list[str]:
         
     return []
 
-def check_squirry_response_exists(signal_id: str) -> bool:
-    """Checks the database directly to verify if squirry_response is present and non-null for a signal."""
+def get_squirry_data_from_db(signal_id: str) -> dict:
+    """Fetches the signal details and squirry_response from the database directly."""
     if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
         # Local mock fallback
-        return True
+        return {
+            "title": "Costco employees say their breakroom is essentially a convenience store",
+            "canonical_url": "https://x.com/WallStreetApes/status/2068867754279764227",
+            "squirry_response": {
+                "data": {
+                    "summary": "## Key Takeaways\n* **Convenience Store Setup:** Costco employee breakrooms are equipped with micro-markets resembling convenience stores...",
+                    "referred_entities": [
+                        {"entity_name": "Costco Wholesale Corporation", "entity_type": "Organization"}
+                    ]
+                }
+            }
+        }
     url = f"{SUPABASE_URL}/rest/v1/discovery_final_signals"
     headers = {
         "apikey": SUPABASE_SERVICE_ROLE_KEY,
@@ -504,18 +515,20 @@ def check_squirry_response_exists(signal_id: str) -> bool:
     }
     params = {
         "signal_id": f"eq.{signal_id}",
-        "select": "squirry_response"
+        "select": "title,canonical_url,squirry_response"
     }
     try:
         res = requests.get(url, headers=headers, params=params)
         if res.status_code == 200:
             data = res.json()
             if data and len(data) > 0:
-                resp = data[0].get("squirry_response")
-                return resp is not None
+                record = data[0]
+                if record.get("squirry_response") is not None:
+                    return record
     except Exception as e:
-        print(f"[Database Warning] Failed to check squirry_response: {e}")
-    return False
+        print(f"[Database Warning] Failed to fetch squirry_response: {e}")
+    return None
+
 
 def create_instagram_post_db(signal_id: str, status: str, carousel_data: dict) -> str:
     """Creates a post entry in the Supabase instagram_posts table via direct PostgREST call."""
@@ -797,21 +810,28 @@ async def run_agent(run_id: str = None, signal_id: str = None, dry_run: bool = F
         log_info(f"Targeting Signal ID: {target_signal_id}")
         log_info("=" * 60)
         
-        # Pre-flight Squirry check
-        if not check_squirry_response_exists(target_signal_id):
+        # Pre-flight Squirry check & data loading
+        squirry_data = get_squirry_data_from_db(target_signal_id)
+        if not squirry_data:
             log_error(f"Squirry response is missing for signal {target_signal_id}. Content generation requires Squirry data.")
             update_instagram_post_db(post_id, "FAILED", [], error_message="Squirry response is missing for this signal. Content generation requires Squirry data.")
             continue
+            
+        title = squirry_data.get("title", "")
+        canonical_url = squirry_data.get("canonical_url", "")
+        squirry_response = squirry_data.get("squirry_response", {})
         
         # 3. Generate content using the Creator Agent
         deck = None
         try:
             async with Agent(config) as agent:
                 prompt = (
-                    f"Please call get_squirry_analysis for the signal with ID '{target_signal_id}' to retrieve the source data.\n\n"
-                    "Note: The tool returns a JSON object containing the target signal's 'title', 'canonical_url', and 'squirry_response'. "
-                    "You must analyze the returned 'squirry_response' and construct the creative storyboard from it.\n\n"
+                    "You must analyze the supplied Squirry AI analysis data and construct a premium Instagram carousel from it.\n\n"
+                    f"SIGNAL TITLE: {title}\n"
+                    f"CANONICAL URL: {canonical_url}\n"
+                    f"SQUIRRY RESPONSE JSON:\n{json.dumps(squirry_response, indent=2)}\n\n"
                     "Transform this specific story data into a premium Instagram carousel. Apply the following design system, storytelling rules, and output structure:\n\n"
+
                     "────────────────────────────\n"
                     "OBJECTIVE\n"
                     "────────────────────────────\n"
