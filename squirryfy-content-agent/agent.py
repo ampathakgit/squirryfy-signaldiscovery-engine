@@ -15,6 +15,8 @@ except ImportError:
     print("[ERROR] google-antigravity library is not installed. Please install requirements.txt first.")
     sys.exit(1)
 
+from google import genai
+from google.genai import types as genai_types
 from schemas import CarouselDeck, SlideConfig
 from renderer import render_slide_to_image
 
@@ -268,6 +270,62 @@ def get_latest_flash_model(api_key: str) -> str | None:
     except Exception as e:
         print(f"[Model Discovery Warning] Failed to fetch latest Gemini models list: {e}")
         return None
+
+def generate_background_image(prompt: str, output_path: str) -> bool:
+    """Generates a slide background using gemini-3.1-flash-image."""
+    if not GEMINI_API_KEY:
+        log_error("GEMINI_API_KEY is not defined. Skipping background image generation.")
+        return False
+    try:
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        log_info(f"Generating background image using gemini-3.1-flash-image for prompt: {prompt[:60]}...")
+        full_prompt = (
+            f"{prompt}. Premium luxury editorial magazine background, clean design, cinematic lighting, "
+            "minimalist style, dark navy and gold primary tones, high-end commercial aesthetic, no text or overlays."
+        )
+        response = client.models.generate_content(
+            model="gemini-3.1-flash-image",
+            contents=full_prompt,
+            config=genai_types.GenerateContentConfig(
+                response_modalities=["IMAGE"],
+                image_config=genai_types.ImageConfig(
+                    aspect_ratio="3:4"
+                )
+            )
+        )
+        for part in response.candidates[0].content.parts:
+            if part.inline_data:
+                with open(output_path, "wb") as f:
+                    f.write(part.inline_data.data)
+                log_info(f"Successfully generated background image and saved to {output_path}")
+                return True
+    except Exception as e:
+        log_error(f"Failed to generate background image with gemini-3.1-flash-image: {e}. Trying fallback model gemini-2.5-flash-image...")
+        try:
+            client = genai.Client(api_key=GEMINI_API_KEY)
+            full_prompt = (
+                f"{prompt}. Premium luxury editorial magazine background, clean design, cinematic lighting, "
+                "minimalist style, dark navy and gold primary tones, high-end commercial aesthetic, no text or overlays."
+            )
+            response = client.models.generate_content(
+                model="gemini-2.5-flash-image",
+                contents=full_prompt,
+                config=genai_types.GenerateContentConfig(
+                    response_modalities=["IMAGE"],
+                    image_config=genai_types.ImageConfig(
+                        aspect_ratio="3:4"
+                    )
+                )
+            )
+            for part in response.candidates[0].content.parts:
+                if part.inline_data:
+                    with open(output_path, "wb") as f:
+                        f.write(part.inline_data.data)
+                    log_info(f"Successfully generated background image using fallback gemini-2.5-flash-image: {output_path}")
+                    return True
+        except Exception as fallback_err:
+            log_error(f"Fallback model also failed: {fallback_err}")
+    return False
 
 # --- Direct Supabase DB & Storage REST Operations ---
 
@@ -625,7 +683,7 @@ def publish_to_instagram(caption: str, image_urls: list[str]) -> dict:
         "post_url": post_url
     }
 
-async def run_agent(run_id: str = None, signal_id: str = None):
+async def run_agent(run_id: str = None, signal_id: str = None, dry_run: bool = False):
     global post_id
     
     # Verify mandatory API keys
@@ -693,12 +751,9 @@ async def run_agent(run_id: str = None, signal_id: str = None):
             enable_subagents=False
         ),
         system_instructions=(
-            "You are the Squirryfy Creative Director. Your job is to fetch the Squirry AI analysis "
-            "for the target signal using get_squirry_analysis, and generate a visually stunning "
-            "and highly engaging Instagram Carousel Deck (5 to 7 slides) detailing the trend. "
-            "Generate the copywriting script (a captions with hashtags) and slide layouts yourself. "
-            "Output the final carousel deck structure matching the CarouselDeck schema "
-            "exactly inside a ```json ... ``` code block. Follow the requested format precisely."
+            "You are an award-winning Editorial Art Director, Information Designer, Visual Journalist, "
+            "Instagram Growth Strategist, and Luxury Magazine Illustrator. Your task is to transform "
+            "the supplied content analysis into a premium, magazine-quality Instagram carousel infographic."
         )
     )
     
@@ -722,20 +777,49 @@ async def run_agent(run_id: str = None, signal_id: str = None):
         try:
             async with Agent(config) as agent:
                 prompt = (
-                    f"Please call get_squirry_analysis for the signal with ID '{target_signal_id}'. "
-                    "Then, create a CarouselDeck structure. You must output the result in JSON inside a single "
-                    "```json ... ``` code block. The JSON must exactly match the CarouselDeck schema:\n"
+                    f"Please call get_squirry_analysis for the signal with ID '{target_signal_id}' to retrieve the source data.\n\n"
+                    "Then, transform this data into a premium Instagram carousel. Apply the following design system, storytelling rules, and output structure:\n\n"
+                    "────────────────────────────\n"
+                    "OBJECTIVE\n"
+                    "────────────────────────────\n"
+                    "Create a visually stunning Instagram carousel explaining the story. Optimize for shares, saves, and educational/editorial impact.\n"
+                    "Style: Luxury Editorial Infographic. The layout should feel like Vox, Bloomberg Originals, Netflix Documentary, or The Economist.\n\n"
+                    "────────────────────────────\n"
+                    "DESIGN SYSTEM & COLORS\n"
+                    "────────────────────────────\n"
+                    "Primary Color: #0D1B2A | Secondary Color: #F4C542 | Accent Color: #D62828 | White: #FFFFFF\n"
+                    "Typography: Strong modern headlines, large numbers, clean visual spacing, elegant layout configurations.\n\n"
+                    "────────────────────────────\n"
+                    "CAROUSEL STRUCTURE ENGINE\n"
+                    "────────────────────────────\n"
+                    "Dynamically generate between 7 and 10 slides based on the story mode chosen (e.g. Explainer, Timeline, Comparison, etc.).\n"
+                    "For each slide, you must define:\n"
+                    "1. slide_number: Sequence number (starting from 1)\n"
+                    "2. title: Strong main headline text\n"
+                    "3. subtitle: Captivating context subtitle\n"
+                    "4. key_message: The single takeaway sentence\n"
+                    "5. visual_concept: Deep visual narrative describing what background image should show\n"
+                    "6. layout: One of the supported layout templates: 'hero', 'comparison', 'statistics', 'quote', 'timeline', 'entity', 'conclusion'\n"
+                    "7. entities_used: List of strings showing which referred_entities are in this slide\n"
+                    "8. image_prompt: A detailed, highly descriptive prompt to feed into an image generator to produce the background graphic (cinematic lighting, print-quality, photorealistic or premium illustration, without text or overlays)\n\n"
+                    "────────────────────────────\n"
+                    "OUTPUT FORMAT\n"
+                    "────────────────────────────\n"
+                    "You must output the final deck in JSON matching the CarouselDeck schema exactly inside a single ```json ... ``` code block. JSON format:\n"
                     "{\n"
-                    "  \"signal_id\": \"string\",\n"
+                    "  \"story_mode\": \"string\",\n"
+                    "  \"theme\": \"string\",\n"
                     "  \"caption\": \"string\",\n"
                     "  \"slides\": [\n"
                     "    {\n"
                     "      \"slide_number\": 1,\n"
                     "      \"title\": \"string\",\n"
-                    "      \"body\": \"string\",\n"
-                    "      \"bg_theme\": \"dark-cyberpunk\" | \"neon-emerald\" | \"clean-minimal\" | \"royal-gold\" | \"blue-gradient\",\n"
-                    "      \"image_prompt\": \"string\",\n"
-                    "      \"layout_style\": \"centered\" | \"left-split\" | \"two-column\" | \"bottom-docked\"\n"
+                    "      \"subtitle\": \"string\",\n"
+                    "      \"key_message\": \"string\",\n"
+                    "      \"visual_concept\": \"string\",\n"
+                    "      \"layout\": \"hero\" | \"comparison\" | \"statistics\" | \"quote\" | \"timeline\" | \"entity\" | \"conclusion\",\n"
+                    "      \"entities_used\": [\"string\"],\n"
+                    "      \"image_prompt\": \"string\"\n"
                     "    }\n"
                     "  ]\n"
                     "}"
@@ -749,7 +833,7 @@ async def run_agent(run_id: str = None, signal_id: str = None):
                 deck_dict = extract_json_block(response_text)
                 deck = CarouselDeck.model_validate(deck_dict)
                 
-                log_info(f"Creative generation success for Signal ID: {deck.signal_id}")
+                log_info(f"Creative generation success for Theme: {deck.theme}")
                 log_info(f"Copywriting Caption: {deck.caption}")
         except Exception as e:
             log_error(f"Failed to generate or validate CarouselDeck: {e}")
@@ -764,10 +848,19 @@ async def run_agent(run_id: str = None, signal_id: str = None):
         slide_paths = []
         try:
             for slide in deck.slides:
-                filename = f"slide_{deck.signal_id}_{slide.slide_number}.jpg"
+                filename = f"slide_{target_signal_id}_{slide.slide_number}.jpg"
                 output_path = os.path.join(OUTPUT_DIR, filename)
+                
+                # Generate background image using Gemini
+                bg_filename = f"bg_{target_signal_id}_{slide.slide_number}.jpg"
+                bg_path = os.path.join(OUTPUT_DIR, bg_filename)
+                
+                bg_success = generate_background_image(slide.image_prompt, bg_path)
+                if not bg_success:
+                    bg_path = None
+                
                 log_info(f"Rendering Slide {slide.slide_number}/{len(deck.slides)} -> {filename}")
-                await render_slide_to_image(slide, len(deck.slides), output_path)
+                await render_slide_to_image(slide, len(deck.slides), output_path, bg_path)
                 slide_paths.append((slide.slide_number, filename, output_path))
         except Exception as e:
             log_error(f"Failed during slide rendering: {e}")
@@ -794,24 +887,28 @@ async def run_agent(run_id: str = None, signal_id: str = None):
         instagram_media_id = None
         post_url = None
         
-        try:
-            pub_res = publish_to_instagram(deck.caption, cdn_urls)
-            if pub_res.get("success"):
-                post_status = "PUBLISHED"
-                instagram_media_id = pub_res.get("instagram_media_id")
-                post_url = pub_res.get("post_url")
-                log_info(f"Published successfully! Live link: {post_url}")
-            elif pub_res.get("dry_run"):
-                post_status = "GENERATED"
-                log_info("Dry Run Mode: Slides created but Meta API publish skipped (missing credentials).")
-            else:
+        if dry_run:
+            log_info("Dry Run Mode Enabled: Skipping Meta API publishing stage.")
+            post_status = "GENERATED"
+        else:
+            try:
+                pub_res = publish_to_instagram(deck.caption, cdn_urls)
+                if pub_res.get("success"):
+                    post_status = "PUBLISHED"
+                    instagram_media_id = pub_res.get("instagram_media_id")
+                    post_url = pub_res.get("post_url")
+                    log_info(f"Published successfully! Live link: {post_url}")
+                elif pub_res.get("dry_run"):
+                    post_status = "GENERATED"
+                    log_info("Dry Run Mode: Slides created but Meta API publish skipped (missing credentials).")
+                else:
+                    post_status = "FAILED"
+                    error_message = pub_res.get("error", "Unknown error")
+                    log_error(f"Publishing failed: {error_message}")
+            except Exception as e:
+                log_error(f"Publishing exception: {str(e)}")
                 post_status = "FAILED"
-                error_message = pub_res.get("error", "Unknown error")
-                log_error(f"Publishing failed: {error_message}")
-        except Exception as e:
-            log_error(f"Publishing exception: {str(e)}")
-            post_status = "FAILED"
-            error_message = str(e)
+                error_message = str(e)
             
         # 7. Update database record with final details
         log_info(f"Updating database status to {post_status}...")
@@ -832,6 +929,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Squirryfy Instagram Creator Agent")
     parser.add_argument("--run-id", type=str, help="Optional specific discovery run ID to select signals from")
     parser.add_argument("--signal-id", type=str, help="Optional specific signal ID to process")
+    parser.add_argument("--dry-run", action="store_true", help="Generate slides and upload images, but do not publish to live Instagram feed")
     args = parser.parse_args()
     
-    asyncio.run(run_agent(run_id=args.run_id, signal_id=args.signal_id))
+    asyncio.run(run_agent(run_id=args.run_id, signal_id=args.signal_id, dry_run=args.dry_run))
