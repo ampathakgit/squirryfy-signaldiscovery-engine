@@ -192,13 +192,15 @@ export default function Home() {
 
   // Fetch signals reactively on filter change
   useEffect(() => {
+    // Reset selected date ribbon when other search/filters change
+    setSelectedDate('all');
+
     const fetchSignals = async () => {
       setLoading(true);
       try {
         const params = new URLSearchParams();
         if (selectedRegion !== 'all') params.append('region', selectedRegion);
         if (selectedCategory !== 'all') params.append('category', selectedCategory);
-        if (selectedDate !== 'all') params.append('date', selectedDate);
         if (searchQuery.trim().length > 0) params.append('search', searchQuery);
 
         const res = await fetch(`/api/squirry/signals?${params.toString()}`);
@@ -219,7 +221,22 @@ export default function Home() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [selectedRegion, selectedCategory, selectedDate, searchQuery]);
+  }, [selectedRegion, selectedCategory, searchQuery]);
+
+  const handleDateSelect = (dateStr: string) => {
+    setSelectedDate(dateStr);
+    if (dateStr === 'all') {
+      const headerEl = document.getElementById('squirry-feed-header');
+      if (headerEl) {
+        headerEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } else {
+      const sectionEl = document.getElementById(`date-section-${dateStr}`);
+      if (sectionEl) {
+        sectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  };
 
   return (
     <div className={`squirry-theme ${theme} min-h-screen`}>
@@ -345,7 +362,7 @@ export default function Home() {
 
         {/* Main Feed Content Area */}
         <main className="squirry-main-content">
-          <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+          <header id="squirry-feed-header" className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-[var(--brand-cream)]">Stash Library</h1>
               <p className="text-xs text-[var(--text-muted)]">Explore the latest viral attention signals and deep AI insights</p>
@@ -383,7 +400,7 @@ export default function Home() {
             <div className="squirry-date-ribbon-container">
               <div className="squirry-date-ribbon">
                 <button
-                  onClick={() => setSelectedDate('all')}
+                  onClick={() => handleDateSelect('all')}
                   className={`squirry-date-chip-all ${selectedDate === 'all' ? 'active' : ''}`}
                 >
                   <Clock className="w-4 h-4 shrink-0" />
@@ -404,7 +421,7 @@ export default function Home() {
                   return (
                     <button
                       key={dateStr}
-                      onClick={() => setSelectedDate(dateStr)}
+                      onClick={() => handleDateSelect(dateStr)}
                       className={`squirry-date-chip ${selectedDate === dateStr ? 'active' : ''}`}
                     >
                       <span className="squirry-date-chip-day">{dayName}</span>
@@ -461,9 +478,9 @@ export default function Home() {
                     year: 'numeric'
                   });
 
-                  // Render sticky timeline header if date changes and All History is active
+                  // Render sticky timeline header if date changes (always render to support anchors)
                   let headerElement = null;
-                  if (selectedDate === 'all' && dateKey !== lastDateGroup) {
+                  if (dateKey !== lastDateGroup) {
                     lastDateGroup = dateKey;
                     
                     const formattedGroupHeader = date.toLocaleDateString(undefined, {
@@ -474,11 +491,12 @@ export default function Home() {
                     });
                     
                     headerElement = (
-                      <div key={`header-${dateKey}`} className="squirry-timeline-header">
+                      <div key={`header-${dateKey}`} id={`date-section-${dateKey}`} className="squirry-timeline-header">
                         <div className="squirry-timeline-badge">
                           <Clock className="w-3.5 h-3.5 text-[var(--brand-gold)]" />
                           <span>{formattedGroupHeader}</span>
                         </div>
+                        <div className="squirry-timeline-line" />
                       </div>
                     );
                   }

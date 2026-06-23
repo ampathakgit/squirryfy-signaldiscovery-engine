@@ -489,6 +489,7 @@
   background: var(--bg-page);
   margin-top: 12px;
   margin-bottom: 4px;
+  scroll-margin-top: 24px; /* Clean spacing for anchor scrolls */
 }
 
 @media (max-width: 768px) {
@@ -512,4 +513,12 @@
   font-weight: 700;
   box-shadow: var(--shadow-premium);
   letter-spacing: 0.5px;
+}
+
+.squirry-timeline-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--border-glass-active), transparent);
+  margin-left: 16px;
+  opacity: 0.6;
 }
