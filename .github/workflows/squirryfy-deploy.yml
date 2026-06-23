@@ -74,6 +74,10 @@ jobs:
           DEFAULT_GEMINI_MODEL: ${{ secrets.DEFAULT_GEMINI_MODEL }}
           INSTAGRAM_BUSINESS_ACCOUNT_ID: ${{ secrets.INSTAGRAM_BUSINESS_ACCOUNT_ID }}
           META_PAGE_ACCESS_TOKEN: ${{ secrets.META_PAGE_ACCESS_TOKEN }}
+          CONTENT_GENERATOR_PROVIDER: ${{ secrets.CONTENT_GENERATOR_PROVIDER }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+          OPENAI_IMAGE_MODEL: ${{ secrets.OPENAI_IMAGE_MODEL }}
         run: |
           if [ -z "$SERVER_IP" ]; then
             echo "::error::Target SERVER_IP is not set. Please run the Terraform workflow or define secrets.SERVER_IP."
@@ -95,7 +99,12 @@ jobs:
             echo 'JWT_SECRET=$JWT_SECRET' >> /etc/squirryfy.env && \
             echo 'INSTAGRAM_BUSINESS_ACCOUNT_ID=$INSTAGRAM_BUSINESS_ACCOUNT_ID' >> /etc/squirryfy.env && \
             echo 'META_PAGE_ACCESS_TOKEN=$META_PAGE_ACCESS_TOKEN' >> /etc/squirryfy.env && \
+            echo 'CONTENT_GENERATOR_PROVIDER=$CONTENT_GENERATOR_PROVIDER' >> /etc/squirryfy.env && \
+            echo 'OPENAI_API_KEY=$OPENAI_API_KEY' >> /etc/squirryfy.env && \
+            echo 'OPENAI_MODEL=$OPENAI_MODEL' >> /etc/squirryfy.env && \
+            echo 'OPENAI_IMAGE_MODEL=$OPENAI_IMAGE_MODEL' >> /etc/squirryfy.env && \
             echo 'Logging in to GHCR on server...' && \
+
             docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} && \
             echo 'Pulling latest image...' && \
             docker pull ghcr.io/${REPO_OWNER}/squirryfy-signaldiscovery-engine:latest && \

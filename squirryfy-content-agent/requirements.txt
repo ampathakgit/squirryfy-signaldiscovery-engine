@@ -2,3 +2,5 @@ google-antigravity
 pydantic
 playwright
 requests
+openai
+

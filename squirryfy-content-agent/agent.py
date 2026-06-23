@@ -20,6 +20,11 @@ from google.genai import types as genai_types
 from schemas import CarouselDeck, SlideConfig
 from renderer import render_slide_to_image
 
+try:
+    import openai
+except ImportError:
+    openai = None
+
 # 1. Load environment variables
 load_dotenv()
 if not os.getenv("SQUIRRY_API_KEY"):
@@ -30,6 +35,13 @@ if not os.getenv("SQUIRRY_API_KEY"):
 SQUIRRY_BASE_URL = os.getenv("SQUIRRY_BASE_URL", "http://localhost:3000")
 SQUIRRY_API_KEY = os.getenv("SQUIRRY_API_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+
+# OpenAI config parameters
+CONTENT_GENERATOR_PROVIDER = os.getenv("CONTENT_GENERATOR_PROVIDER", "gemini").lower()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
+OPENAI_IMAGE_MODEL = os.getenv("OPENAI_IMAGE_MODEL", "dall-e-3")
+
 
 # Supabase Credentials
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
@@ -272,43 +284,49 @@ def get_latest_flash_model(api_key: str) -> str | None:
         return None
 
 def generate_background_image(prompt: str, output_path: str) -> bool:
-    """Generates a slide background using gemini-3.1-flash-image."""
-    if not GEMINI_API_KEY:
-        log_error("GEMINI_API_KEY is not defined. Skipping background image generation.")
-        return False
-    try:
-        client = genai.Client(api_key=GEMINI_API_KEY)
-        log_info(f"Generating background image using gemini-3.1-flash-image for prompt: {prompt[:60]}...")
-        full_prompt = (
-            f"{prompt}. Premium luxury editorial magazine background, clean design, cinematic lighting, "
-            "minimalist style, dark navy and gold primary tones, high-end commercial aesthetic, no text or overlays."
-        )
-        response = client.models.generate_content(
-            model="gemini-3.1-flash-image",
-            contents=full_prompt,
-            config=genai_types.GenerateContentConfig(
-                response_modalities=["IMAGE"],
-                image_config=genai_types.ImageConfig(
-                    aspect_ratio="3:4"
+    """Generates a slide background using the configured provider (OpenAI DALL-E 3 or Gemini), with fallback."""
+    # 1. Try OpenAI DALL-E 3 if configured as primary provider
+    if CONTENT_GENERATOR_PROVIDER == "openai" and OPENAI_API_KEY:
+        if not openai:
+            log_error("openai package is not available, falling back to Gemini.")
+        else:
+            try:
+                client = openai.OpenAI(api_key=OPENAI_API_KEY)
+                log_info(f"Generating background image using OpenAI {OPENAI_IMAGE_MODEL} for prompt: {prompt[:60]}...")
+                full_prompt = (
+                    f"{prompt}. Premium luxury editorial magazine background, clean design, cinematic lighting, "
+                    "minimalist style, dark navy and gold primary tones, high-end commercial aesthetic, no text or overlays."
                 )
-            )
-        )
-        for part in response.candidates[0].content.parts:
-            if part.inline_data:
-                with open(output_path, "wb") as f:
-                    f.write(part.inline_data.data)
-                log_info(f"Successfully generated background image and saved to {output_path}")
-                return True
-    except Exception as e:
-        log_error(f"Failed to generate background image with gemini-3.1-flash-image: {e}. Trying fallback model gemini-2.5-flash-image...")
+                response = client.images.generate(
+                    model=OPENAI_IMAGE_MODEL,
+                    prompt=full_prompt,
+                    size="1024x1792", # DALL-E 3 vertical aspect ratio
+                    quality="standard",
+                    n=1,
+                )
+                image_url = response.data[0].url
+                img_res = requests.get(image_url)
+                if img_res.status_code == 200:
+                    with open(output_path, "wb") as f:
+                        f.write(img_res.content)
+                    log_info(f"Successfully generated background image via OpenAI DALL-E and saved to {output_path}")
+                    return True
+                else:
+                    log_error(f"Failed to download image from OpenAI URL: HTTP {img_res.status_code}")
+            except Exception as e:
+                log_error(f"Failed to generate background image with OpenAI: {e}. Trying fallback to Gemini...")
+
+    # 2. Try Gemini Image Generation (either as primary or fallback)
+    if GEMINI_API_KEY:
         try:
             client = genai.Client(api_key=GEMINI_API_KEY)
+            log_info(f"Generating background image using gemini-3.1-flash-image for prompt: {prompt[:60]}...")
             full_prompt = (
                 f"{prompt}. Premium luxury editorial magazine background, clean design, cinematic lighting, "
                 "minimalist style, dark navy and gold primary tones, high-end commercial aesthetic, no text or overlays."
             )
             response = client.models.generate_content(
-                model="gemini-2.5-flash-image",
+                model="gemini-3.1-flash-image",
                 contents=full_prompt,
                 config=genai_types.GenerateContentConfig(
                     response_modalities=["IMAGE"],
@@ -321,11 +339,35 @@ def generate_background_image(prompt: str, output_path: str) -> bool:
                 if part.inline_data:
                     with open(output_path, "wb") as f:
                         f.write(part.inline_data.data)
-                    log_info(f"Successfully generated background image using fallback gemini-2.5-flash-image: {output_path}")
+                    log_info(f"Successfully generated background image using gemini-3.1-flash-image and saved to {output_path}")
                     return True
-        except Exception as fallback_err:
-            log_error(f"Fallback model also failed: {fallback_err}")
+        except Exception as e:
+            log_error(f"Failed to generate background image with gemini-3.1-flash-image: {e}. Trying fallback model gemini-2.5-flash-image...")
+            try:
+                client = genai.Client(api_key=GEMINI_API_KEY)
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash-image",
+                    contents=full_prompt,
+                    config=genai_types.GenerateContentConfig(
+                        response_modalities=["IMAGE"],
+                        image_config=genai_types.ImageConfig(
+                            aspect_ratio="3:4"
+                        )
+                    )
+                )
+                for part in response.candidates[0].content.parts:
+                    if part.inline_data:
+                        with open(output_path, "wb") as f:
+                            f.write(part.inline_data.data)
+                        log_info(f"Successfully generated background image using fallback gemini-2.5-flash-image: {output_path}")
+                        return True
+            except Exception as fallback_err:
+                log_error(f"Fallback model also failed: {fallback_err}")
+    else:
+        log_error("GEMINI_API_KEY is not defined. Cannot run fallback image generation.")
+        
     return False
+
 
 # --- Direct Supabase DB & Storage REST Operations ---
 
@@ -878,20 +920,59 @@ async def run_agent(run_id: str = None, signal_id: str = None, dry_run: bool = F
                     "}"
                 )
                 
-                log_info("Orchestrating creative analysis with Gemini...")
-                response = await agent.chat(prompt)
-                response_text = await response.text()
-                
-                log_info("Parsing structured CarouselDeck response...")
-                deck_dict = extract_json_block(response_text)
-                deck = CarouselDeck.model_validate(deck_dict)
-                
-                log_info(f"Creative generation success for Theme: {deck.theme}")
-                log_info(f"Copywriting Caption: {deck.caption}")
+                # 1. Try OpenAI if configured
+                openai_success = False
+                if CONTENT_GENERATOR_PROVIDER == "openai" and OPENAI_API_KEY:
+                    if not openai:
+                        log_error("openai package is not available, falling back to Gemini.")
+                    else:
+                        try:
+                            log_info("Orchestrating creative analysis with OpenAI...")
+                            openai_client = openai.OpenAI(api_key=OPENAI_API_KEY)
+                            
+                            system_instructions = (
+                                "You are an award-winning Editorial Art Director, Information Designer, Visual Journalist, "
+                                "Instagram Growth Strategist, and Luxury Magazine Illustrator. Your task is to transform "
+                                "the supplied content analysis into a premium, magazine-quality Instagram carousel infographic."
+                            )
+                            
+                            response = openai_client.chat.completions.create(
+                                model=OPENAI_MODEL,
+                                messages=[
+                                    {"role": "system", "content": system_instructions},
+                                    {"role": "user", "content": prompt}
+                                ],
+                                response_format={"type": "json_object"},
+                                temperature=0.7,
+                            )
+                            response_text = response.choices[0].message.content
+                            log_info("Parsing structured CarouselDeck response from OpenAI...")
+                            deck_dict = json.loads(response_text)
+                            deck = CarouselDeck.model_validate(deck_dict)
+                            log_info(f"Creative generation success using OpenAI for Theme: {deck.theme}")
+                            log_info(f"Copywriting Caption: {deck.caption}")
+                            openai_success = True
+                        except Exception as oai_err:
+                            log_error(f"OpenAI creative generation failed: {oai_err}. Trying fallback to Gemini...")
+                            deck = None
+
+                # 2. Try Gemini if OpenAI was not run or failed
+                if not openai_success:
+                    log_info("Orchestrating creative analysis with Gemini...")
+                    response = await agent.chat(prompt)
+                    response_text = await response.text()
+                    
+                    log_info("Parsing structured CarouselDeck response from Gemini...")
+                    deck_dict = extract_json_block(response_text)
+                    deck = CarouselDeck.model_validate(deck_dict)
+                    
+                    log_info(f"Creative generation success using Gemini for Theme: {deck.theme}")
+                    log_info(f"Copywriting Caption: {deck.caption}")
         except Exception as e:
             log_error(f"Failed to generate or validate CarouselDeck: {e}")
             update_instagram_post_db(post_id, "FAILED", [], error_message=f"Agent error: {str(e)}")
             continue
+
 
         # Update database record with parsed carousel_data
         update_instagram_post_db(post_id, "PENDING", [], carousel_data=deck.model_dump())
