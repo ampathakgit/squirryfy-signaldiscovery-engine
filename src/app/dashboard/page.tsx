@@ -102,6 +102,7 @@ export default function DashboardPage() {
   const [instagramPosts, setInstagramPosts] = useState<any[]>([]);
   const [isFetchingInstagramPosts, setIsFetchingInstagramPosts] = useState<boolean>(false);
   const [isTriggeringInstagram, setIsTriggeringInstagram] = useState<boolean>(false);
+  const [enrichingSignalId, setEnrichingSignalId] = useState<string | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [lightboxCaption, setLightboxCaption] = useState<string>('');
   const [expandedLogs, setExpandedLogs] = useState<Record<string, boolean>>({});
@@ -456,6 +457,38 @@ export default function DashboardPage() {
       alert(`Error triggering agent: ${e.message}`);
     } finally {
       setIsTriggeringInstagram(false);
+    }
+  };
+
+  // Trigger Squirry Analysis manually for specific signal
+  const triggerSquirryAnalysisForSignal = async (signalId: string, title: string) => {
+    const isConfirmed = window.confirm(
+      `Are you sure you want to trigger Squirry AI Analysis for signal: "${title}"?\n\n` +
+      `This will call Squirry's /analyze API, fetch fresh takeaways, entities, and update the record directly in Supabase.`
+    );
+    if (!isConfirmed) return;
+
+    setEnrichingSignalId(signalId);
+    try {
+      console.log(`[Frontend] Performing Squirry AI Analysis for signal: ${signalId}`);
+      const resp = await fetch('/api/squirry/enrich', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signalId })
+      });
+
+      if (resp.ok) {
+        alert("Squirry AI Analysis successfully generated and saved to Supabase!");
+        // Refresh the signals list so dashboard UI updates
+        fetchFinalSignals();
+      } else {
+        const errData = await resp.json().catch(() => ({}));
+        alert(`Squirry analysis failed: ${errData.error || 'Unknown error'}`);
+      }
+    } catch (e: any) {
+      alert(`Squirry analysis error: ${e.message}`);
+    } finally {
+      setEnrichingSignalId(null);
     }
   };
 
@@ -1274,14 +1307,23 @@ export default function DashboardPage() {
                               </div>
                             </div>
 
-                            <div className="border-t border-neutral-800/50 pt-4 mt-auto">
+                            <div className="border-t border-neutral-800/50 pt-4 mt-auto flex flex-col sm:flex-row gap-2">
                               <button
                                 onClick={() => triggerInstagramAgentForSignal(sig.signalId, sig.title)}
-                                disabled={isTriggeringInstagram}
-                                className="w-full flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-pink-650 to-purple-650 hover:from-pink-600 hover:to-purple-600 border border-pink-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-pink-950/20 active:scale-[0.98] cursor-pointer"
+                                disabled={isTriggeringInstagram || enrichingSignalId !== null}
+                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-bold text-white bg-gradient-to-r from-pink-650 to-purple-650 hover:from-pink-600 hover:to-purple-600 border border-pink-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md active:scale-[0.98] cursor-pointer"
                               >
                                 <Instagram className="w-3.5 h-3.5" />
                                 Generate Carousel
+                              </button>
+                              
+                              <button
+                                onClick={() => triggerSquirryAnalysisForSignal(sig.signalId, sig.title)}
+                                disabled={isTriggeringInstagram || enrichingSignalId !== null}
+                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-bold text-neutral-300 bg-neutral-900 border border-neutral-850 hover:bg-neutral-850 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98] cursor-pointer"
+                              >
+                                <RefreshCw className={`w-3.5 h-3.5 ${enrichingSignalId === sig.signalId ? 'animate-spin text-cyan-400' : ''}`} />
+                                {enrichingSignalId === sig.signalId ? 'Analyzing...' : 'Generate Squirry Analysis'}
                               </button>
                             </div>
                           </div>
