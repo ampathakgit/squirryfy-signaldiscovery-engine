@@ -22,6 +22,11 @@ export async function proxy(request: NextRequest) {
 
   // Protect all /api/ endpoints EXCEPT /api/auth/login and /api/mcp (authenticated via API key)
   if (pathname.startsWith('/api') && !pathname.startsWith('/api/auth/login')) {
+    // Allow public access to public landing page data APIs
+    if (pathname === '/api/squirry/filters' || pathname === '/api/squirry/signals') {
+      return NextResponse.next();
+    }
+
     if (pathname.startsWith('/api/mcp')) {
       const apiKeyHeader = request.headers.get('x-api-key') || request.headers.get('Authorization')?.replace('Bearer ', '');
       if (apiKeyHeader && apiKeyHeader === process.env.SQUIRRY_API_KEY) {
