@@ -381,8 +381,20 @@
 .squirry-date-ribbon-container {
   width: 100%;
   overflow: hidden;
-  position: relative;
+  position: sticky;
+  top: -32px; /* Offset the 32px padding of .squirry-main-content */
+  z-index: 20;
+  background: var(--bg-page);
+  padding: 8px 4px 12px 4px;
   margin-top: -8px;
+  margin-bottom: -4px;
+}
+
+@media (max-width: 768px) {
+  .squirry-date-ribbon-container {
+    top: -16px; /* Offset the 16px mobile padding */
+    padding: 6px 2px 10px 2px;
+  }
 }
 
 .squirry-date-ribbon {
@@ -483,19 +495,20 @@
   display: flex;
   align-items: center;
   position: sticky;
-  top: -32px;
+  top: 64px; /* Sticks below the sticky date ribbon on desktop */
   z-index: 10;
   padding: 14px 0 10px 0;
   background: var(--bg-page);
   margin-top: 12px;
   margin-bottom: 4px;
-  scroll-margin-top: 24px; /* Clean spacing for anchor scrolls */
+  scroll-margin-top: 110px; /* Offset for anchor scrolls (ribbon height + header padding) */
 }
 
 @media (max-width: 768px) {
   .squirry-timeline-header {
-    top: -16px;
+    top: 76px; /* Sticks below the sticky date ribbon on mobile */
     padding: 10px 0 8px 0;
+    scroll-margin-top: 110px;
   }
 }
 
