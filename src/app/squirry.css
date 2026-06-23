@@ -39,29 +39,29 @@
   --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 2. Slate Dark Theme (Minimalist Charcoal/Zinc) */
+/* 2. Slate Dark Theme (Minimalist Pitch Black / Zinc) */
 .squirry-theme.theme-dark {
-  --brand-purple: #27272a;
-  --brand-purple-dark: #18181b;
+  --brand-purple: #18181b;
+  --brand-purple-dark: #09090b;
   --brand-gold: #38bdf8; /* Sky blue accents */
   --brand-gold-dark: #0284c7;
-  --brand-cream: #f4f4f5;
+  --brand-cream: #ffffff;
   
-  --bg-page: #09090b;
-  --bg-page-gradient: radial-gradient(circle at top left, #1e1b4b, #09090b 70%);
-  --bg-surface: rgba(24, 24, 27, 0.5);
-  --bg-surface-hover: rgba(39, 39, 42, 0.65);
+  --bg-page: #000000;
+  --bg-page-gradient: radial-gradient(circle at top left, #18181b, #000000 85%);
+  --bg-surface: rgba(20, 20, 20, 0.65);
+  --bg-surface-hover: rgba(30, 30, 30, 0.75);
   --border-glass: rgba(255, 255, 255, 0.08);
   --border-glass-active: rgba(56, 189, 248, 0.4);
   
-  --text-main: #f4f4f5;
-  --text-muted: #a1a1aa;
-  --text-inverse: #09090b;
+  --text-main: #e4e4e7;
+  --text-muted: #71717a;
+  --text-inverse: #000000;
 
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
 
-  --shadow-premium: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
+  --shadow-premium: 0 8px 32px 0 rgba(0, 0, 0, 0.75);
   --shadow-glow: 0 0 20px rgba(56, 189, 248, 0.15);
   --radius-sm: 8px;
   --radius-md: 16px;
@@ -71,22 +71,22 @@
 
 /* 3. Light / White Theme (Clean and Modern) */
 .squirry-theme.theme-light {
-  --brand-purple: #e2e8f0;
+  --brand-purple: #f1f5f9;
   --brand-purple-dark: #cbd5e1;
   --brand-gold: #4f46e5; /* Indigo accents */
   --brand-gold-dark: #4338ca;
-  --brand-cream: #0f172a;
+  --brand-cream: #0f172a; /* Dark slate headers */
   
   --bg-page: #f8fafc;
   --bg-page-gradient: radial-gradient(circle at top left, #e0f2fe, #f8fafc 70%);
   --bg-surface: rgba(255, 255, 255, 0.7);
-  --bg-surface-hover: rgba(241, 245, 249, 0.85);
+  --bg-surface-hover: rgba(226, 232, 240, 0.85);
   --border-glass: rgba(15, 23, 42, 0.08);
   --border-glass-active: rgba(79, 70, 229, 0.4);
   
-  --text-main: #0f172a;
+  --text-main: #1e293b; /* High-contrast slate text for body */
   --text-muted: #475569;
-  --text-inverse: #ffffff;
+  --text-inverse: #ffffff; /* White text on active buttons */
 
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;

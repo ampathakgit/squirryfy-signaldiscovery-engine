@@ -92,7 +92,7 @@ const renderMarkdown = (text: string) => {
     while ((match = boldRegex.exec(cleanLine)) !== null) {
       const before = cleanLine.substring(lastIndex, match.index);
       if (before) parts.push(before);
-      parts.push(<strong key={match.index} className="text-[#dac898] font-bold">{match[1]}</strong>);
+      parts.push(<strong key={match.index} className="text-[var(--brand-gold)] font-bold">{match[1]}</strong>);
       lastIndex = boldRegex.lastIndex;
     }
 
@@ -103,21 +103,21 @@ const renderMarkdown = (text: string) => {
 
     if (isH1) {
       return (
-        <h3 key={idx} className="text-lg font-extrabold mt-6 mb-2 text-[#dac898]">
+        <h3 key={idx} className="text-lg font-extrabold mt-6 mb-2 text-[var(--brand-gold)]">
           {content}
         </h3>
       );
     }
     if (isH2) {
       return (
-        <h4 key={idx} className="text-base font-bold mt-4 mb-2 text-[#dac898]">
+        <h4 key={idx} className="text-base font-bold mt-4 mb-2 text-[var(--brand-gold)]">
           {content}
         </h4>
       );
     }
     if (isH3) {
       return (
-        <h5 key={idx} className="text-sm font-semibold mt-3 mb-1 text-[#f0ebdd]">
+        <h5 key={idx} className="text-sm font-semibold mt-3 mb-1 text-[var(--brand-cream)]">
           {content}
         </h5>
       );
@@ -125,14 +125,14 @@ const renderMarkdown = (text: string) => {
 
     if (isBullet) {
       return (
-        <li key={idx} className="ml-4 mb-1.5 list-disc text-sm leading-relaxed text-[#f0ebdd]">
+        <li key={idx} className="ml-4 mb-1.5 list-disc text-sm leading-relaxed text-[var(--brand-cream)]">
           {content}
         </li>
       );
     }
 
     return (
-      <p key={idx} className="mb-2.5 min-h-[1em] text-sm leading-relaxed text-[#f0ebdd]">
+      <p key={idx} className="mb-2.5 min-h-[1em] text-sm leading-relaxed text-[var(--brand-cream)]">
         {content}
       </p>
     );
@@ -225,26 +225,26 @@ export default function Home() {
         <aside className="squirry-sidebar">
           {/* Logo Branding */}
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-[#5b256e] to-[#dac898] flex items-center justify-center shadow-lg border border-white/10">
-              <Sparkles className="w-5 h-5 text-white" />
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-[var(--brand-purple)] to-[var(--brand-gold)] flex items-center justify-center shadow-lg border border-[var(--border-glass)]">
+              <Sparkles className="w-5 h-5 text-[var(--text-inverse)]" />
             </div>
             <div>
-              <h2 className="text-xl font-bold tracking-tight text-[#f0ebdd]">Squirryfy</h2>
-              <span className="text-[10px] text-[#dac898] font-semibold tracking-widest uppercase">Intel Portal</span>
+              <h2 className="text-xl font-bold tracking-tight text-[var(--brand-cream)]">Squirryfy</h2>
+              <span className="text-[10px] text-[var(--brand-gold)] font-semibold tracking-widest uppercase">Intel Portal</span>
             </div>
           </div>
 
           {/* Region Selector */}
           <div className="flex flex-col gap-1.5">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[#b5adc0] mb-2 px-2 flex items-center gap-1.5">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2 px-2 flex items-center gap-1.5">
               <Globe className="w-3.5 h-3.5" /> Regions
             </p>
             <button 
               onClick={() => setSelectedRegion('all')}
               className={`text-left px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
                 selectedRegion === 'all' 
-                  ? 'bg-[#dac898]/15 text-[#f0ebdd] border border-[#dac898]/25 font-medium' 
-                  : 'text-[#b5adc0] hover:text-[#f0ebdd] border border-transparent'
+                  ? 'bg-[var(--brand-gold)]/15 text-[var(--brand-cream)] border border-[var(--brand-gold)]/25 font-medium' 
+                  : 'text-[var(--text-muted)] hover:text-[var(--brand-cream)] border border-transparent'
               }`}
             >
               All Regions
@@ -255,8 +255,8 @@ export default function Home() {
                 onClick={() => setSelectedRegion(r.id)}
                 className={`text-left px-3 py-2 rounded-lg text-sm transition-all duration-200 capitalize ${
                   selectedRegion === r.id 
-                    ? 'bg-[#dac898]/15 text-[#f0ebdd] border border-[#dac898]/25 font-medium' 
-                    : 'text-[#b5adc0] hover:text-[#f0ebdd] border border-transparent'
+                    ? 'bg-[var(--brand-gold)]/15 text-[var(--brand-cream)] border border-[var(--brand-gold)]/25 font-medium' 
+                    : 'text-[var(--text-muted)] hover:text-[var(--brand-cream)] border border-transparent'
                 }`}
               >
                 {r.name}
@@ -266,15 +266,15 @@ export default function Home() {
 
           {/* Category Selector */}
           <div className="flex flex-col gap-1.5">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[#b5adc0] mb-2 px-2 flex items-center gap-1.5">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2 px-2 flex items-center gap-1.5">
               <Tag className="w-3.5 h-3.5" /> Topics
             </p>
             <button 
               onClick={() => setSelectedCategory('all')}
               className={`text-left px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
                 selectedCategory === 'all' 
-                  ? 'bg-[#dac898]/15 text-[#f0ebdd] border border-[#dac898]/25 font-medium' 
-                  : 'text-[#b5adc0] hover:text-[#f0ebdd] border border-transparent'
+                  ? 'bg-[var(--brand-gold)]/15 text-[var(--brand-cream)] border border-[var(--brand-gold)]/25 font-medium' 
+                  : 'text-[var(--text-muted)] hover:text-[var(--brand-cream)] border border-transparent'
               }`}
             >
               All Topics
@@ -285,8 +285,8 @@ export default function Home() {
                 onClick={() => setSelectedCategory(c.id)}
                 className={`text-left px-3 py-2 rounded-lg text-sm transition-all duration-200 capitalize ${
                   selectedCategory === c.id 
-                    ? 'bg-[#dac898]/15 text-[#f0ebdd] border border-[#dac898]/25 font-medium' 
-                    : 'text-[#b5adc0] hover:text-[#f0ebdd] border border-transparent'
+                    ? 'bg-[var(--brand-gold)]/15 text-[var(--brand-cream)] border border-[var(--brand-gold)]/25 font-medium' 
+                    : 'text-[var(--text-muted)] hover:text-[var(--brand-cream)] border border-transparent'
                 }`}
               >
                 {c.name.replace(/_/g, ' ')}
@@ -295,8 +295,8 @@ export default function Home() {
           </div>
 
           {/* Theme Selector */}
-          <div className="flex flex-col gap-1.5 mt-2 pt-4 border-t border-white/5">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[#b5adc0] mb-2 px-2 flex items-center gap-1.5">
+          <div className="flex flex-col gap-1.5 mt-2 pt-4 border-t border-[var(--border-glass)]">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2 px-2 flex items-center gap-1.5">
               <Palette className="w-3.5 h-3.5" /> Appearance
             </p>
             <div className="grid grid-cols-2 gap-2 px-1">
@@ -311,14 +311,14 @@ export default function Home() {
                   onClick={() => handleThemeChange(t.id)}
                   className={`flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] transition-all duration-200 border ${
                     theme === t.id 
-                      ? 'bg-white/10 text-[#f0ebdd] border-white/20 font-medium' 
-                      : 'text-[#b5adc0] hover:text-[#f0ebdd] border-transparent hover:bg-white/5'
+                      ? 'bg-[var(--bg-surface-hover)] text-[var(--brand-cream)] border-[var(--border-glass-active)] font-medium' 
+                      : 'text-[var(--text-muted)] hover:text-[var(--brand-cream)] border-transparent hover:bg-[var(--bg-surface)]'
                   }`}
                 >
                   <span>{t.name}</span>
                   <div className="flex gap-0.5 shrink-0">
-                    <span className="w-2 h-2 rounded-full border border-white/10" style={{ backgroundColor: t.dots[0] }} />
-                    <span className="w-2 h-2 rounded-full border border-white/10" style={{ backgroundColor: t.dots[1] }} />
+                    <span className="w-2 h-2 rounded-full border border-[var(--border-glass)]" style={{ backgroundColor: t.dots[0] }} />
+                    <span className="w-2 h-2 rounded-full border border-[var(--border-glass)]" style={{ backgroundColor: t.dots[1] }} />
                   </div>
                 </button>
               ))}
@@ -326,10 +326,10 @@ export default function Home() {
           </div>
 
           {/* Admin Lock Access */}
-          <div className="mt-auto pt-4 border-t border-white/5">
+          <div className="mt-auto pt-4 border-t border-[var(--border-glass)]">
             <Link 
               href="/dashboard"
-              className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-[#dac898] border border-[#dac898]/20 bg-[#dac898]/5 hover:bg-[#dac898]/10 hover:border-[#dac898]/40 transition-all duration-200"
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold text-[var(--brand-gold)] border border-[var(--border-glass)] bg-[var(--brand-gold)]/5 hover:bg-[var(--brand-gold)]/10 hover:border-[var(--border-glass-active)] transition-all duration-200"
             >
               <span className="flex items-center gap-2">
                 <Lock className="w-3.5 h-3.5" /> Admin Control Portal
@@ -343,20 +343,20 @@ export default function Home() {
         <main className="squirry-main-content">
           <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-[#f0ebdd]">Stash Library</h1>
-              <p className="text-xs text-[#b5adc0]">Explore the latest viral attention signals and deep AI insights</p>
+              <h1 className="text-2xl font-bold tracking-tight text-[var(--brand-cream)]">Stash Library</h1>
+              <p className="text-xs text-[var(--text-muted)]">Explore the latest viral attention signals and deep AI insights</p>
             </div>
             
             <div className="flex items-center gap-3">
-              <span className="text-xs text-[#b5adc0] bg-white/5 border border-white/10 px-2.5 py-1 rounded-md">
-                Active Signals: <strong className="text-[#dac898]">{signals.length}</strong>
+              <span className="text-xs text-[var(--text-muted)] bg-[var(--bg-surface)] border border-[var(--border-glass)] px-2.5 py-1 rounded-md">
+                Active Signals: <strong className="text-[var(--brand-gold)]">{signals.length}</strong>
               </span>
             </div>
           </header>
 
           {/* Search Inputs */}
           <div className="relative w-full">
-            <Search className="w-5 h-5 text-[#b5adc0] absolute left-4 top-1/2 -translate-y-1/2" />
+            <Search className="w-5 h-5 text-[var(--text-muted)] absolute left-4 top-1/2 -translate-y-1/2" />
             <input 
               type="text" 
               placeholder="Search stashes, summary key takeaways, entities, or hashtags..." 
@@ -367,7 +367,7 @@ export default function Home() {
             {searchQuery && (
               <button 
                 onClick={() => setSearchQuery('')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-[#b5adc0] hover:text-[#f0ebdd]"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--brand-cream)]"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -377,15 +377,15 @@ export default function Home() {
           {/* Signal Cards Display Grid */}
           {loading ? (
             <div className="flex flex-col flex-1 items-center justify-center min-h-[300px] gap-3">
-              <Loader2 className="w-10 h-10 animate-spin text-[#dac898]" />
-              <p className="text-sm text-[#b5adc0]">Loading intelligence feed...</p>
+              <Loader2 className="w-10 h-10 animate-spin text-[var(--brand-gold)]" />
+              <p className="text-sm text-[var(--text-muted)]">Loading intelligence feed...</p>
             </div>
           ) : signals.length === 0 ? (
             <div className="squirry-glass-panel py-16 px-4 text-center flex flex-col items-center gap-4 max-w-lg mx-auto w-full">
-              <AlertCircle className="w-10 h-10 text-[#b5adc0]" />
+              <AlertCircle className="w-10 h-10 text-[var(--text-muted)]" />
               <div>
                 <h3 className="text-lg font-bold">No insights matched</h3>
-                <p className="text-sm text-[#b5adc0] mt-1">Try adjusting your filters, clearing your search terms, or check back later.</p>
+                <p className="text-sm text-[var(--text-muted)] mt-1">Try adjusting your filters, clearing your search terms, or check back later.</p>
               </div>
               {(selectedRegion !== 'all' || selectedCategory !== 'all' || searchQuery) && (
                 <button 
@@ -418,15 +418,15 @@ export default function Home() {
                   <div 
                     key={sig.id}
                     onClick={() => setActiveDetailSignal(sig)}
-                    className="squirry-glass-panel squirry-link-card cursor-pointer group hover:scale-[1.01] hover:shadow-[#dac898]/5"
+                    className="squirry-glass-panel squirry-link-card cursor-pointer group hover:scale-[1.01] hover:shadow-[var(--brand-gold)]/5"
                   >
                     {/* Thumbnail Image / Fallback Gradient */}
                     {thumbnail ? (
                       <img src={thumbnail} alt="" className="squirry-link-card-image" />
                     ) : (
-                      <div className="squirry-link-card-image bg-gradient-to-br from-[#411f5c] to-[#0b0614] flex items-center justify-center relative">
-                        <Sparkles className="w-10 h-10 text-[#dac898]/30 group-hover:scale-110 transition-transform duration-300" />
-                        <span className="absolute bottom-3 left-3 text-[9px] font-bold uppercase tracking-wider text-[#dac898]/50">
+                      <div className="squirry-link-card-image bg-gradient-to-br from-[var(--brand-purple-dark)] to-[var(--bg-page)] flex items-center justify-center relative">
+                        <Sparkles className="w-10 h-10 text-[var(--brand-gold)]/30 group-hover:scale-110 transition-transform duration-300" />
+                        <span className="absolute bottom-3 left-3 text-[9px] font-bold uppercase tracking-wider text-[var(--brand-gold)]/50">
                           Squirry AI Analysis
                         </span>
                       </div>
@@ -440,7 +440,7 @@ export default function Home() {
                       <div className="flex items-center gap-2">
                         <span className="squirry-badge-region">{sig.regionId}</span>
                         {sqData.platform && (
-                          <span className="text-[11px] capitalize text-[#b5adc0]">
+                          <span className="text-[11px] capitalize text-[var(--text-muted)]">
                             {sqData.platform}
                           </span>
                         )}
@@ -449,10 +449,10 @@ export default function Home() {
 
                     {/* Title */}
                     <div className="flex flex-col gap-1.5 flex-1">
-                      <h3 className="text-base font-bold text-[#f0ebdd] line-clamp-2 group-hover:text-[#dac898] transition-colors duration-200 leading-snug">
+                      <h3 className="text-base font-bold text-[var(--brand-cream)] line-clamp-2 group-hover:text-[var(--brand-gold)] transition-colors duration-200 leading-snug">
                         {sqData.title || sig.title}
                       </h3>
-                      <p className="text-xs text-[#b5adc0] line-clamp-3 leading-relaxed mt-1">
+                      <p className="text-xs text-[var(--text-muted)] line-clamp-3 leading-relaxed mt-1">
                         {sig.whySelected || 'No additional summary details available.'}
                       </p>
                     </div>
@@ -469,11 +469,11 @@ export default function Home() {
                     )}
 
                     {/* Bottom date and actions details */}
-                    <div className="flex items-center justify-between border-t border-white/5 pt-3.5 mt-2 text-[11px] text-[#b5adc0]">
+                    <div className="flex items-center justify-between border-t border-[var(--border-glass)] pt-3.5 mt-2 text-[11px] text-[var(--text-muted)]">
                       <span className="flex items-center gap-1">
                         <Clock className="w-3.5 h-3.5" /> {displayDate}
                       </span>
-                      <span className="text-[#dac898] group-hover:underline flex items-center gap-0.5 font-semibold">
+                      <span className="text-[var(--brand-gold)] group-hover:underline flex items-center gap-0.5 font-semibold">
                         View Analysis →
                       </span>
                     </div>
@@ -487,11 +487,11 @@ export default function Home() {
         {/* Collapsible right slide-out details panel / drawer */}
         {activeDetailSignal && (
           <div 
-            className="fixed inset-0 bg-black/80 z-[100] flex justify-end transition-opacity duration-300"
+            className="fixed inset-0 bg-black/70 z-[100] flex justify-end transition-opacity duration-300"
             onClick={() => setActiveDetailSignal(null)}
           >
             <div 
-              className="squirry-glass-panel w-full max-w-xl h-full rounded-none border-l border-white/10 flex flex-col p-6 sm:p-8 overflow-y-auto bg-[#0e081a] relative"
+              className="squirry-glass-panel w-full max-w-xl h-full rounded-none border-l border-[var(--border-glass)] flex flex-col p-6 sm:p-8 overflow-y-auto bg-[var(--bg-page)] relative"
               onClick={e => e.stopPropagation()}
             >
               {/* Header section with buttons */}
@@ -507,7 +507,7 @@ export default function Home() {
                 
                 <button 
                   onClick={() => setActiveDetailSignal(null)}
-                  className="p-1.5 rounded-full hover:bg-white/5 border border-transparent hover:border-white/10 text-[#b5adc0] hover:text-[#f0ebdd] transition-all duration-200"
+                  className="p-1.5 rounded-full hover:bg-[var(--bg-surface-hover)] border border-transparent hover:border-[var(--border-glass-active)] text-[var(--text-muted)] hover:text-[var(--brand-cream)] transition-all duration-200"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -518,25 +518,25 @@ export default function Home() {
                 <img 
                   src={activeDetailSignal.squirryResponse.data.thumbnail} 
                   alt="" 
-                  className="w-full h-52 object-cover rounded-xl border border-white/5 mb-6"
+                  className="w-full h-52 object-cover rounded-xl border border-[var(--border-glass)] mb-6"
                 />
               )}
 
               {/* Title heading */}
-              <h2 className="text-xl sm:text-2xl font-extrabold text-[#f0ebdd] leading-snug mb-3">
+              <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--brand-cream)] leading-snug mb-3">
                 {activeDetailSignal.squirryResponse?.data?.title || activeDetailSignal.title}
               </h2>
 
               {/* Author / Source */}
               {activeDetailSignal.squirryResponse?.data?.author && (
-                <div className="flex items-center gap-3 bg-white/5 border border-white/10 p-3 rounded-lg text-sm text-[#f0ebdd] mb-4">
-                  <div className="w-8 h-8 rounded-full bg-[#5b256e] flex items-center justify-center font-bold text-xs">
+                <div className="flex items-center gap-3 bg-[var(--bg-surface)] border border-[var(--border-glass)] p-3 rounded-lg text-sm text-[var(--brand-cream)] mb-4">
+                  <div className="w-8 h-8 rounded-full bg-[var(--brand-purple)] flex items-center justify-center font-bold text-xs">
                     {activeDetailSignal.squirryResponse.data.author.charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <p className="font-semibold">{activeDetailSignal.squirryResponse.data.author}</p>
                     {activeDetailSignal.squirryResponse.data.platform && (
-                      <p className="text-[10px] text-[#b5adc0] uppercase tracking-wider">
+                      <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
                         Source: {activeDetailSignal.squirryResponse.data.platform}
                       </p>
                     )}
@@ -549,7 +549,7 @@ export default function Home() {
                 href={activeDetailSignal.canonicalUrl} 
                 target="_blank" 
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#dac898] hover:underline mb-6"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--brand-gold)] hover:underline mb-6"
               >
                 <ExternalLink className="w-3.5 h-3.5" /> Open original stashed link
               </a>
@@ -558,26 +558,26 @@ export default function Home() {
               <div className="flex flex-col gap-6">
                 
                 {/* Branding Headers */}
-                <div className="flex items-center gap-3.5 border-b border-white/5 pb-3">
-                  <div className="w-7 h-7 rounded-md bg-[#dac898] flex items-center justify-center">
-                    <Sparkles className="w-4 h-4 text-[#0b0614]" />
+                <div className="flex items-center gap-3.5 border-b border-[var(--border-glass)] pb-3">
+                  <div className="w-7 h-7 rounded-md bg-[var(--brand-gold)] flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 text-[var(--text-inverse)]" />
                   </div>
-                  <h3 className="text-lg font-bold text-[#f0ebdd] m-0">Squirry.AI Analytical Intel</h3>
-                  <span className="bg-[#dac898] text-[#0b0614] text-[9px] font-black px-2 py-0.5 rounded tracking-wide">
+                  <h3 className="text-lg font-bold text-[var(--brand-cream)] m-0">Squirry.AI Analytical Intel</h3>
+                  <span className="bg-[var(--brand-gold)] text-[var(--text-inverse)] text-[9px] font-black px-2 py-0.5 rounded tracking-wide">
                     PRO
                   </span>
                 </div>
 
                 {/* Credibility Box */}
                 {activeDetailSignal.squirryResponse?.data?.structured_summary?.credibility && (
-                  <div className="p-4 rounded-xl border bg-[#5b256e]/5 border-[#dac898]/20">
+                  <div className="p-4 rounded-xl border bg-[var(--brand-purple)]/5 border-[var(--brand-gold)]/20">
                     <div className="flex items-center gap-2 mb-2">
-                      <Sparkles className="w-4 h-4 text-[#dac898]" />
-                      <span className="text-xs font-extrabold uppercase tracking-wider text-[#dac898]">
+                      <Sparkles className="w-4 h-4 text-[var(--brand-gold)]" />
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-[var(--brand-gold)]">
                         Credibility: {activeDetailSignal.squirryResponse.data.structured_summary.credibility.status}
                       </span>
                     </div>
-                    <p className="text-xs leading-relaxed text-[#f0ebdd] m-0">
+                    <p className="text-xs leading-relaxed text-[var(--brand-cream)] m-0">
                       {activeDetailSignal.squirryResponse.data.structured_summary.credibility.reason}
                     </p>
                   </div>
@@ -586,8 +586,8 @@ export default function Home() {
                 {/* Summary takeaways */}
                 {activeDetailSignal.squirryResponse?.data?.summary && (
                   <div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#b5adc0] mb-3">Quick Takeaway Summary</h4>
-                    <div className="bg-white/2 border border-white/5 p-4 rounded-xl">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-3">Quick Takeaway Summary</h4>
+                    <div className="bg-[var(--bg-surface)] border border-[var(--border-glass)] p-4 rounded-xl">
                       {renderMarkdown(activeDetailSignal.squirryResponse.data.summary)}
                     </div>
                   </div>
@@ -596,15 +596,15 @@ export default function Home() {
                 {/* Detected Entities list */}
                 {activeDetailSignal.squirryResponse?.data?.referred_entities && activeDetailSignal.squirryResponse.data.referred_entities.length > 0 && (
                   <div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#b5adc0] mb-3">Extracted Core Entities</h4>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-3">Extracted Core Entities</h4>
                     <div className="flex flex-col gap-2">
                       {activeDetailSignal.squirryResponse.data.referred_entities.map((ent, idx) => (
-                        <div key={idx} className="flex justify-between items-start gap-4 p-3 rounded-lg border border-white/5 bg-white/2">
+                        <div key={idx} className="flex justify-between items-start gap-4 p-3 rounded-lg border border-[var(--border-glass)] bg-[var(--bg-surface)]">
                           <div>
-                            <p className="text-xs font-bold text-[#f0ebdd]">{ent.entity_name}</p>
-                            <p className="text-[10px] text-[#b5adc0] mt-0.5">{ent.entity_type}</p>
+                            <p className="text-xs font-bold text-[var(--brand-cream)]">{ent.entity_name}</p>
+                            <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{ent.entity_type}</p>
                             {ent.description && (
-                              <p className="text-[11px] text-[#b5adc0]/70 mt-1.5 leading-relaxed">{ent.description}</p>
+                              <p className="text-[11px] text-[var(--text-muted)]/70 mt-1.5 leading-relaxed">{ent.description}</p>
                             )}
                           </div>
                           {ent.search_query && (
@@ -612,7 +612,7 @@ export default function Home() {
                               href={`https://www.google.com/search?q=${encodeURIComponent(ent.search_query)}`} 
                               target="_blank" 
                               rel="noreferrer"
-                              className="text-[10px] font-bold text-[#dac898] hover:underline shrink-0"
+                              className="text-[10px] font-bold text-[var(--brand-gold)] hover:underline shrink-0"
                             >
                               Search Google →
                             </a>
@@ -626,15 +626,15 @@ export default function Home() {
                 {/* Suggested Action items */}
                 {activeDetailSignal.squirryResponse?.data?.action_items && activeDetailSignal.squirryResponse.data.action_items.length > 0 && (
                   <div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#b5adc0] mb-3">Suggested Tasks & Actions</h4>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-3">Suggested Tasks & Actions</h4>
                     <div className="flex flex-col gap-2">
                       {activeDetailSignal.squirryResponse.data.action_items.map((item, idx) => (
                         <div key={idx} className="flex gap-3 bg-emerald-500/5 border border-emerald-500/10 p-3.5 rounded-lg">
                           <div className="text-emerald-400 font-bold mt-0.5">✓</div>
                           <div className="flex-1">
-                            <p className="text-xs font-semibold text-[#f0ebdd]">{item.task || item.description || item.rationale}</p>
+                            <p className="text-xs font-semibold text-[var(--brand-cream)]">{item.task || item.description || item.rationale}</p>
                             {item.due_date && (
-                              <span className="text-[10px] text-[#b5adc0] block mt-1">Due: {item.due_date}</span>
+                              <span className="text-[10px] text-[var(--text-muted)] block mt-1">Due: {item.due_date}</span>
                             )}
                           </div>
                         </div>
@@ -645,8 +645,8 @@ export default function Home() {
 
                 {/* AI Tags list */}
                 {activeDetailSignal.squirryResponse?.data?.tags && activeDetailSignal.squirryResponse.data.tags.length > 0 && (
-                  <div className="border-t border-white/5 pt-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#b5adc0] mb-3">Tags & Hashtags</h4>
+                  <div className="border-t border-[var(--border-glass)] pt-4">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-3">Tags & Hashtags</h4>
                     <div className="flex flex-wrap gap-2">
                       {activeDetailSignal.squirryResponse.data.tags.map((tag, idx) => (
                         <span key={idx} className="squirry-badge-tag">
