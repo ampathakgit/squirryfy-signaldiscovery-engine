@@ -298,22 +298,32 @@ def generate_background_image(prompt: str, output_path: str) -> bool:
                     "minimalist style, dark navy and gold primary tones, high-end commercial aesthetic, no text or overlays."
                 )
                 quality_val = "auto" if "gpt-image" in OPENAI_IMAGE_MODEL.lower() else "standard"
+                size_val = "1024x1536" if "gpt-image" in OPENAI_IMAGE_MODEL.lower() else "1024x1792"
                 response = client.images.generate(
                     model=OPENAI_IMAGE_MODEL,
                     prompt=full_prompt,
-                    size="1024x1792", # DALL-E 3 vertical aspect ratio
+                    size=size_val,
                     quality=quality_val,
                     n=1,
                 )
-                image_url = response.data[0].url
-                img_res = requests.get(image_url)
-                if img_res.status_code == 200:
+                image_data = response.data[0]
+                if getattr(image_data, "url", None):
+                    img_res = requests.get(image_data.url)
+                    if img_res.status_code == 200:
+                        with open(output_path, "wb") as f:
+                            f.write(img_res.content)
+                        log_info(f"Successfully generated background image via OpenAI URL and saved to {output_path}")
+                        return True
+                    else:
+                        log_error(f"Failed to download image from OpenAI URL: HTTP {img_res.status_code}")
+                elif getattr(image_data, "b64_json", None):
+                    import base64
                     with open(output_path, "wb") as f:
-                        f.write(img_res.content)
-                    log_info(f"Successfully generated background image via OpenAI DALL-E and saved to {output_path}")
+                        f.write(base64.b64decode(image_data.b64_json))
+                    log_info(f"Successfully generated background image via OpenAI Base64 and saved to {output_path}")
                     return True
                 else:
-                    log_error(f"Failed to download image from OpenAI URL: HTTP {img_res.status_code}")
+                    log_error("OpenAI image generation response did not contain url or b64_json.")
             except Exception as e:
                 log_error(f"Failed to generate background image with OpenAI: {e}. Trying fallback to Gemini...")
 
