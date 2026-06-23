@@ -40,7 +40,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 CONTENT_GENERATOR_PROVIDER = os.getenv("CONTENT_GENERATOR_PROVIDER", "gemini").lower()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
-OPENAI_IMAGE_MODEL = os.getenv("OPENAI_IMAGE_MODEL", "dall-e-3")
+OPENAI_IMAGE_MODEL = os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1")
 
 
 # Supabase Credentials
