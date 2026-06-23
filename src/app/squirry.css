@@ -383,11 +383,12 @@
   overflow: hidden;
   position: sticky;
   top: -32px; /* Offset the 32px padding of .squirry-main-content */
-  z-index: 20;
+  z-index: 30;
   background: var(--bg-page);
   padding: 8px 4px 12px 4px;
   margin-top: -8px;
   margin-bottom: -4px;
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
@@ -425,6 +426,7 @@
   transition: var(--transition-smooth);
   color: var(--text-muted);
   box-shadow: var(--shadow-premium);
+  flex-shrink: 0;
 }
 
 .squirry-date-chip-all {
@@ -495,20 +497,20 @@
   display: flex;
   align-items: center;
   position: sticky;
-  top: 64px; /* Sticks below the sticky date ribbon on desktop */
-  z-index: 10;
+  top: 80px; /* Sticks below the sticky date ribbon on desktop */
+  z-index: 20;
   padding: 14px 0 10px 0;
   background: var(--bg-page);
   margin-top: 12px;
   margin-bottom: 4px;
-  scroll-margin-top: 110px; /* Offset for anchor scrolls (ribbon height + header padding) */
+  scroll-margin-top: 120px; /* Offset for anchor scrolls (ribbon height + header padding) */
 }
 
 @media (max-width: 768px) {
   .squirry-timeline-header {
-    top: 76px; /* Sticks below the sticky date ribbon on mobile */
+    top: 92px; /* Sticks below the sticky date ribbon on mobile */
     padding: 10px 0 8px 0;
-    scroll-margin-top: 110px;
+    scroll-margin-top: 120px;
   }
 }
 
