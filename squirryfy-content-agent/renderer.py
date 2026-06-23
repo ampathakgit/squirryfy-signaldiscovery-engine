@@ -239,7 +239,7 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
             .brand {{
                 font-family: 'Outfit', sans-serif;
                 font-weight: 700;
-                font-size: 24px;
+                font-size: 28px;
                 letter-spacing: -0.5px;
                 display: flex;
                 align-items: center;
@@ -254,7 +254,7 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
                 box-shadow: 0 0 12px {secondary_color};
             }}
             .slide-tag {{
-                font-size: 14px;
+                font-size: 18px;
                 font-weight: 600;
                 letter-spacing: 2px;
                 text-transform: uppercase;
@@ -272,7 +272,7 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
                 font-family: 'Outfit', sans-serif;
                 text-transform: uppercase;
                 letter-spacing: 3px;
-                font-size: 18px;
+                font-size: 22px;
                 font-weight: 700;
                 color: {secondary_color};
                 margin-bottom: 16px;
@@ -280,7 +280,7 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
             }}
             .hero-title {{
                 font-family: 'Playfair Display', serif;
-                font-size: 64px;
+                font-size: 72px;
                 font-weight: 800;
                 line-height: 1.15;
                 letter-spacing: -1.5px;
@@ -294,7 +294,7 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
                 border-radius: 2px;
             }}
             .hero-message {{
-                font-size: 26px;
+                font-size: 32px;
                 line-height: 1.5;
                 color: rgba(255, 255, 255, 0.9);
                 font-weight: 400;
@@ -308,13 +308,13 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
             }}
             .template-title {{
                 font-family: 'Outfit', sans-serif;
-                font-size: 42px;
+                font-size: 48px;
                 font-weight: 800;
                 letter-spacing: -1px;
                 margin-bottom: 12px;
             }}
             .template-subtitle {{
-                font-size: 20px;
+                font-size: 24px;
                 color: rgba(255, 255, 255, 0.6);
                 margin-bottom: 40px;
             }}
@@ -335,13 +335,13 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
                 border-top: 4px solid {secondary_color};
             }}
             .comparison-card p {{
-                font-size: 22px;
+                font-size: 28px;
                 line-height: 1.5;
                 color: rgba(255, 255, 255, 0.95);
             }}
             .card-tag {{
                 font-family: 'Outfit', sans-serif;
-                font-size: 14px;
+                font-size: 18px;
                 font-weight: 700;
                 letter-spacing: 2px;
                 color: {secondary_color};
@@ -369,7 +369,7 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
             }}
             .stat-number {{
                 font-family: 'Outfit', sans-serif;
-                font-size: 120px;
+                font-size: 150px;
                 font-weight: 800;
                 line-height: 1;
                 color: {secondary_color};
@@ -377,24 +377,24 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
             }}
             .stat-decorator {{
                 width: 12px;
-                height: 60px;
+                height: 72px;
                 background: {accent_color};
                 border-radius: 6px;
             }}
             .stat-title {{
                 font-family: 'Outfit', sans-serif;
-                font-size: 38px;
+                font-size: 44px;
                 font-weight: 800;
                 margin-bottom: 16px;
                 line-height: 1.2;
             }}
             .stat-subtitle {{
-                font-size: 20px;
+                font-size: 24px;
                 color: rgba(255, 255, 255, 0.6);
                 margin-bottom: 24px;
             }}
             .stat-message {{
-                font-size: 24px;
+                font-size: 28px;
                 line-height: 1.5;
                 color: rgba(255, 255, 255, 0.85);
             }}
@@ -410,7 +410,7 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
             }}
             .quote-mark {{
                 font-family: 'Playfair Display', serif;
-                font-size: 140px;
+                font-size: 160px;
                 line-height: 1;
                 color: {accent_color};
                 height: 60px;
@@ -418,7 +418,7 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
             }}
             .quote-text {{
                 font-family: 'Playfair Display', serif;
-                font-size: 36px;
+                font-size: 44px;
                 font-style: italic;
                 line-height: 1.4;
                 color: {white};
@@ -432,20 +432,20 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
                 margin-bottom: 8px;
             }}
             .attribution-line {{
-                width: 24px;
-                height: 2px;
+                width: 32px;
+                height: 3px;
                 background: {secondary_color};
             }}
             .attribution-name {{
                 font-family: 'Outfit', sans-serif;
-                font-size: 20px;
+                font-size: 24px;
                 font-weight: 700;
                 text-transform: uppercase;
                 letter-spacing: 1.5px;
                 color: {secondary_color};
             }}
             .quote-sub {{
-                font-size: 16px;
+                font-size: 20px;
                 color: rgba(255, 255, 255, 0.5);
             }}
 
@@ -478,8 +478,8 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
                 align-items: center;
             }}
             .step-dot {{
-                width: 20px;
-                height: 20px;
+                width: 24px;
+                height: 24px;
                 border-radius: 50%;
                 background: rgba(255, 255, 255, 0.3);
                 border: 4px solid rgba(13, 27, 42, 1);
@@ -503,7 +503,7 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
                 padding-bottom: 20px;
             }}
             .step-content p {{
-                font-size: 22px;
+                font-size: 28px;
                 line-height: 1.4;
                 color: rgba(255, 255, 255, 0.9);
             }}
@@ -538,20 +538,20 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
                 gap: 12px;
             }}
             .badge-icon {{
-                width: 16px;
-                height: 16px;
+                width: 20px;
+                height: 20px;
                 border-radius: 50%;
                 background: {accent_color};
                 box-shadow: 0 0 8px {accent_color};
             }}
             .badge-title {{
                 font-family: 'Outfit', sans-serif;
-                font-size: 18px;
+                font-size: 22px;
                 font-weight: 700;
                 color: {white};
             }}
             .entity-takeaway {{
-                font-size: 24px;
+                font-size: 30px;
                 line-height: 1.5;
                 color: rgba(255, 255, 255, 0.85);
             }}
@@ -565,7 +565,7 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
             }}
             .conclusion-title {{
                 font-family: 'Outfit', sans-serif;
-                font-size: 48px;
+                font-size: 54px;
                 font-weight: 800;
                 line-height: 1.2;
                 margin-bottom: 24px;
@@ -579,19 +579,19 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
             }}
             .conclusion-highlight {{
                 font-family: 'Outfit', sans-serif;
-                font-size: 24px;
+                font-size: 30px;
                 font-weight: 700;
                 color: {secondary_color};
                 margin-bottom: 12px;
             }}
             .conclusion-body {{
-                font-size: 22px;
+                font-size: 28px;
                 line-height: 1.5;
                 color: rgba(255, 255, 255, 0.85);
             }}
             .conclusion-cta {{
                 font-family: 'Outfit', sans-serif;
-                font-size: 16px;
+                font-size: 20px;
                 font-weight: 700;
                 text-transform: uppercase;
                 letter-spacing: 2px;
@@ -628,7 +628,7 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
             }}
             .action-hint {{
                 font-family: 'Outfit', sans-serif;
-                font-size: 14px;
+                font-size: 18px;
                 font-weight: 700;
                 text-transform: uppercase;
                 color: rgba(255, 255, 255, 0.5);
@@ -638,7 +638,7 @@ def render_slide_html(slide: SlideConfig, total_slides: int, bg_path: str = None
                 letter-spacing: 1px;
             }}
             .action-hint span {{
-                font-size: 18px;
+                font-size: 22px;
                 color: {secondary_color};
             }}
         </style>
