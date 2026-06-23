@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { 
   Search, Globe, Tag, ExternalLink, Lock, X, 
-  Sparkles, Loader2, ArrowRight, BookOpen, Clock, AlertCircle
+  Sparkles, Loader2, ArrowRight, BookOpen, Clock, AlertCircle, Palette
 } from 'lucide-react';
 import './squirry.css';
 
@@ -153,6 +153,22 @@ export default function Home() {
   // Drawer Detail view state
   const [activeDetailSignal, setActiveDetailSignal] = useState<Signal | null>(null);
 
+  // Theme state
+  const [theme, setTheme] = useState('theme-purple');
+
+  // Load theme from localStorage on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('squirryfy-theme');
+    if (savedTheme) {
+      setTheme(savedTheme);
+    }
+  }, []);
+
+  const handleThemeChange = (newTheme: string) => {
+    setTheme(newTheme);
+    localStorage.setItem('squirryfy-theme', newTheme);
+  };
+
   // Fetch filters on mount
   useEffect(() => {
     const fetchFilters = async () => {
@@ -202,7 +218,7 @@ export default function Home() {
   }, [selectedRegion, selectedCategory, searchQuery]);
 
   return (
-    <div className="squirry-theme min-h-screen">
+    <div className={`squirry-theme ${theme} min-h-screen`}>
       <div className="squirry-app-container">
         
         {/* Left Sidebar */}
@@ -276,6 +292,37 @@ export default function Home() {
                 {c.name.replace(/_/g, ' ')}
               </button>
             ))}
+          </div>
+
+          {/* Theme Selector */}
+          <div className="flex flex-col gap-1.5 mt-2 pt-4 border-t border-white/5">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#b5adc0] mb-2 px-2 flex items-center gap-1.5">
+              <Palette className="w-3.5 h-3.5" /> Appearance
+            </p>
+            <div className="grid grid-cols-2 gap-2 px-1">
+              {[
+                { id: 'theme-purple', name: 'Purple', dots: ['#5b256e', '#dac898'] },
+                { id: 'theme-dark', name: 'Dark', dots: ['#18181b', '#38bdf8'] },
+                { id: 'theme-light', name: 'Light', dots: ['#ffffff', '#4f46e5'] },
+                { id: 'theme-blue', name: 'Blue', dots: ['#1e3a8a', '#f59e0b'] }
+              ].map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => handleThemeChange(t.id)}
+                  className={`flex items-center justify-between px-2 py-1.5 rounded-lg text-[11px] transition-all duration-200 border ${
+                    theme === t.id 
+                      ? 'bg-white/10 text-[#f0ebdd] border-white/20 font-medium' 
+                      : 'text-[#b5adc0] hover:text-[#f0ebdd] border-transparent hover:bg-white/5'
+                  }`}
+                >
+                  <span>{t.name}</span>
+                  <div className="flex gap-0.5 shrink-0">
+                    <span className="w-2 h-2 rounded-full border border-white/10" style={{ backgroundColor: t.dots[0] }} />
+                    <span className="w-2 h-2 rounded-full border border-white/10" style={{ backgroundColor: t.dots[1] }} />
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Admin Lock Access */}
