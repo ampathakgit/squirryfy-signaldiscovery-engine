@@ -144,11 +144,13 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [regions, setRegions] = useState<FilterOption[]>([]);
   const [categories, setCategories] = useState<FilterOption[]>([]);
+  const [dates, setDates] = useState<string[]>([]);
   
   // Active Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedDate, setSelectedDate] = useState('all');
   
   // Drawer Detail view state
   const [activeDetailSignal, setActiveDetailSignal] = useState<Signal | null>(null);
@@ -179,6 +181,7 @@ export default function Home() {
           // Filter out disabled ones to show only active options
           setRegions(data.regions?.filter((r: any) => r.enabled) || []);
           setCategories(data.categories?.filter((c: any) => c.enabled) || []);
+          setDates(data.dates || []);
         }
       } catch (err) {
         console.error('Failed to fetch filters:', err);
@@ -195,6 +198,7 @@ export default function Home() {
         const params = new URLSearchParams();
         if (selectedRegion !== 'all') params.append('region', selectedRegion);
         if (selectedCategory !== 'all') params.append('category', selectedCategory);
+        if (selectedDate !== 'all') params.append('date', selectedDate);
         if (searchQuery.trim().length > 0) params.append('search', searchQuery);
 
         const res = await fetch(`/api/squirry/signals?${params.toString()}`);
@@ -215,7 +219,7 @@ export default function Home() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [selectedRegion, selectedCategory, searchQuery]);
+  }, [selectedRegion, selectedCategory, selectedDate, searchQuery]);
 
   return (
     <div className={`squirry-theme ${theme} min-h-screen`}>
@@ -374,6 +378,45 @@ export default function Home() {
             )}
           </div>
 
+          {/* Date Selector Ribbon */}
+          {dates.length > 0 && (
+            <div className="squirry-date-ribbon-container">
+              <div className="squirry-date-ribbon">
+                <button
+                  onClick={() => setSelectedDate('all')}
+                  className={`squirry-date-chip-all ${selectedDate === 'all' ? 'active' : ''}`}
+                >
+                  <Clock className="w-4 h-4 shrink-0" />
+                  <span>All History</span>
+                </button>
+                
+                {dates.map(dateStr => {
+                  const parts = dateStr.split('-');
+                  const year = parseInt(parts[0], 10);
+                  const month = parseInt(parts[1], 10) - 1;
+                  const day = parseInt(parts[2], 10);
+                  const d = new Date(year, month, day);
+                  
+                  const dayName = d.toLocaleDateString(undefined, { weekday: 'short' });
+                  const dayNum = d.getDate();
+                  const monthName = d.toLocaleDateString(undefined, { month: 'short' });
+                  
+                  return (
+                    <button
+                      key={dateStr}
+                      onClick={() => setSelectedDate(dateStr)}
+                      className={`squirry-date-chip ${selectedDate === dateStr ? 'active' : ''}`}
+                    >
+                      <span className="squirry-date-chip-day">{dayName}</span>
+                      <span className="squirry-date-chip-num">{dayNum}</span>
+                      <span className="squirry-date-chip-month">{monthName}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Signal Cards Display Grid */}
           {loading ? (
             <div className="flex flex-col flex-1 items-center justify-center min-h-[300px] gap-3">
@@ -402,84 +445,113 @@ export default function Home() {
             </div>
           ) : (
             <div className="squirry-cards-grid">
-              {signals.map(sig => {
-                const sqData = sig.squirryResponse?.data || {};
-                const thumbnail = sqData.thumbnail;
-                
-                // Format display date
-                const date = new Date(sig.createdAt);
-                const displayDate = date.toLocaleDateString(undefined, { 
-                  month: 'short', 
-                  day: 'numeric',
-                  year: 'numeric'
-                });
+              {(() => {
+                let lastDateGroup = '';
+                return signals.map(sig => {
+                  const sqData = sig.squirryResponse?.data || {};
+                  const thumbnail = sqData.thumbnail;
+                  
+                  // Format display date
+                  const date = new Date(sig.createdAt);
+                  const dateKey = date.toISOString().split('T')[0];
+                  
+                  const displayDate = date.toLocaleDateString(undefined, { 
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric'
+                  });
 
-                return (
-                  <div 
-                    key={sig.id}
-                    onClick={() => setActiveDetailSignal(sig)}
-                    className="squirry-glass-panel squirry-link-card cursor-pointer group hover:scale-[1.01] hover:shadow-[var(--brand-gold)]/5"
-                  >
-                    {/* Thumbnail Image / Fallback Gradient */}
-                    {thumbnail ? (
-                      <img src={thumbnail} alt="" className="squirry-link-card-image" />
-                    ) : (
-                      <div className="squirry-link-card-image bg-gradient-to-br from-[var(--brand-purple-dark)] to-[var(--bg-page)] flex items-center justify-center relative">
-                        <Sparkles className="w-10 h-10 text-[var(--brand-gold)]/30 group-hover:scale-110 transition-transform duration-300" />
-                        <span className="absolute bottom-3 left-3 text-[9px] font-bold uppercase tracking-wider text-[var(--brand-gold)]/50">
-                          Squirry AI Analysis
-                        </span>
+                  // Render sticky timeline header if date changes and All History is active
+                  let headerElement = null;
+                  if (selectedDate === 'all' && dateKey !== lastDateGroup) {
+                    lastDateGroup = dateKey;
+                    
+                    const formattedGroupHeader = date.toLocaleDateString(undefined, {
+                      weekday: 'long',
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric'
+                    });
+                    
+                    headerElement = (
+                      <div key={`header-${dateKey}`} className="squirry-timeline-header">
+                        <div className="squirry-timeline-badge">
+                          <Clock className="w-3.5 h-3.5 text-[var(--brand-gold)]" />
+                          <span>{formattedGroupHeader}</span>
+                        </div>
                       </div>
-                    )}
+                    );
+                  }
 
-                    {/* Metadata tags line */}
-                    <div className="squirry-link-card-meta">
-                      <span className="squirry-badge-category">
-                        {sig.categoryName?.replace(/_/g, ' ') || 'General'}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="squirry-badge-region">{sig.regionId}</span>
-                        {sqData.platform && (
-                          <span className="text-[11px] capitalize text-[var(--text-muted)]">
-                            {sqData.platform}
-                          </span>
+                  return (
+                    <React.Fragment key={`group-${sig.id}`}>
+                      {headerElement}
+                      <div 
+                        onClick={() => setActiveDetailSignal(sig)}
+                        className="squirry-glass-panel squirry-link-card cursor-pointer group hover:scale-[1.01] hover:shadow-[var(--brand-gold)]/5"
+                      >
+                        {/* Thumbnail Image / Fallback Gradient */}
+                        {thumbnail ? (
+                          <img src={thumbnail} alt="" className="squirry-link-card-image" />
+                        ) : (
+                          <div className="squirry-link-card-image bg-gradient-to-br from-[var(--brand-purple-dark)] to-[var(--bg-page)] flex items-center justify-center relative">
+                            <Sparkles className="w-10 h-10 text-[var(--brand-gold)]/30 group-hover:scale-110 transition-transform duration-300" />
+                            <span className="absolute bottom-3 left-3 text-[9px] font-bold uppercase tracking-wider text-[var(--brand-gold)]/50">
+                              Squirry AI Analysis
+                            </span>
+                          </div>
                         )}
-                      </div>
-                    </div>
 
-                    {/* Title */}
-                    <div className="flex flex-col gap-1.5 flex-1">
-                      <h3 className="text-base font-bold text-[var(--brand-cream)] line-clamp-2 group-hover:text-[var(--brand-gold)] transition-colors duration-200 leading-snug">
-                        {sqData.title || sig.title}
-                      </h3>
-                      <p className="text-xs text-[var(--text-muted)] line-clamp-3 leading-relaxed mt-1">
-                        {sig.whySelected || 'No additional summary details available.'}
-                      </p>
-                    </div>
-
-                    {/* Tags row */}
-                    {sqData.tags && sqData.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        {sqData.tags.slice(0, 3).map((tag, idx) => (
-                          <span key={idx} className="squirry-badge-tag">
-                            #{tag}
+                        {/* Metadata tags line */}
+                        <div className="squirry-link-card-meta">
+                          <span className="squirry-badge-category">
+                            {sig.categoryName?.replace(/_/g, ' ') || 'General'}
                           </span>
-                        ))}
-                      </div>
-                    )}
+                          <div className="flex items-center gap-2">
+                            <span className="squirry-badge-region">{sig.regionId}</span>
+                            {sqData.platform && (
+                              <span className="text-[11px] capitalize text-[var(--text-muted)]">
+                                {sqData.platform}
+                              </span>
+                            )}
+                          </div>
+                        </div>
 
-                    {/* Bottom date and actions details */}
-                    <div className="flex items-center justify-between border-t border-[var(--border-glass)] pt-3.5 mt-2 text-[11px] text-[var(--text-muted)]">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5" /> {displayDate}
-                      </span>
-                      <span className="text-[var(--brand-gold)] group-hover:underline flex items-center gap-0.5 font-semibold">
-                        View Analysis →
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
+                        {/* Title */}
+                        <div className="flex flex-col gap-1.5 flex-1">
+                          <h3 className="text-base font-bold text-[var(--brand-cream)] line-clamp-2 group-hover:text-[var(--brand-gold)] transition-colors duration-200 leading-snug">
+                            {sqData.title || sig.title}
+                          </h3>
+                          <p className="text-xs text-[var(--text-muted)] line-clamp-3 leading-relaxed mt-1">
+                            {sig.whySelected || 'No additional summary details available.'}
+                          </p>
+                        </div>
+
+                        {/* Tags row */}
+                        {sqData.tags && sqData.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {sqData.tags.slice(0, 3).map((tag, idx) => (
+                              <span key={idx} className="squirry-badge-tag">
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Bottom date and actions details */}
+                        <div className="flex items-center justify-between border-t border-[var(--border-glass)] pt-3.5 mt-2 text-[11px] text-[var(--text-muted)]">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5" /> {displayDate}
+                          </span>
+                          <span className="text-[var(--brand-gold)] group-hover:underline flex items-center gap-0.5 font-semibold">
+                            View Analysis →
+                          </span>
+                        </div>
+                      </div>
+                    </React.Fragment>
+                  );
+                });
+              })()}
             </div>
           )}
         </main>

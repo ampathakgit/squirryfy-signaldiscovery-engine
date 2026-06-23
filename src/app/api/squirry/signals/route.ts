@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
   const regionId = searchParams.get('region');
   const categoryId = searchParams.get('category');
   const search = searchParams.get('search');
+  const dateStr = searchParams.get('date');
 
   try {
     let query = supabase
@@ -20,6 +21,11 @@ export async function GET(request: NextRequest) {
     }
     if (categoryId && categoryId !== 'all') {
       query = query.eq('category_id', categoryId);
+    }
+    if (dateStr && dateStr !== 'all') {
+      const startOfDay = `${dateStr}T00:00:00.000Z`;
+      const endOfDay = `${dateStr}T23:59:59.999Z`;
+      query = query.gte('created_at', startOfDay).lte('created_at', endOfDay);
     }
 
     const { data: signals, error } = await query.order('created_at', { ascending: false });
