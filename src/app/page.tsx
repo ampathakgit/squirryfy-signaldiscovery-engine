@@ -491,13 +491,16 @@ export default function Home() {
                     });
                     
                     headerElement = (
-                      <div key={`header-${dateKey}`} id={`date-section-${dateKey}`} className="squirry-timeline-header">
-                        <div className="squirry-timeline-badge">
-                          <Clock className="w-3.5 h-3.5 text-[var(--brand-gold)]" />
-                          <span>{formattedGroupHeader}</span>
+                      <React.Fragment key={`header-container-${dateKey}`}>
+                        <div id={`date-section-${dateKey}`} className="squirry-scroll-anchor" />
+                        <div className="squirry-timeline-header">
+                          <div className="squirry-timeline-badge">
+                            <Clock className="w-3.5 h-3.5 text-[var(--brand-gold)]" />
+                            <span>{formattedGroupHeader}</span>
+                          </div>
+                          <div className="squirry-timeline-line" />
                         </div>
-                        <div className="squirry-timeline-line" />
-                      </div>
+                      </React.Fragment>
                     );
                   }
 

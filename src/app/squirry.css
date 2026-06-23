@@ -491,6 +491,17 @@
   opacity: 0.8;
 }
 
+/* Scroll Anchor */
+.squirry-scroll-anchor {
+  grid-column: 1 / -1;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  visibility: hidden;
+  pointer-events: none;
+  scroll-margin-top: 120px; /* Offset for anchor scrolls (ribbon height + padding) */
+}
+
 /* Sticky Timeline Header */
 .squirry-timeline-header {
   grid-column: 1 / -1;
@@ -503,14 +514,12 @@
   background: var(--bg-page);
   margin-top: 12px;
   margin-bottom: 4px;
-  scroll-margin-top: 120px; /* Offset for anchor scrolls (ribbon height + header padding) */
 }
 
 @media (max-width: 768px) {
   .squirry-timeline-header {
     top: 92px; /* Sticks below the sticky date ribbon on mobile */
     padding: 10px 0 8px 0;
-    scroll-margin-top: 120px;
   }
 }
 
