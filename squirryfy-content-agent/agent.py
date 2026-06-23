@@ -297,11 +297,12 @@ def generate_background_image(prompt: str, output_path: str) -> bool:
                     f"{prompt}. Premium luxury editorial magazine background, clean design, cinematic lighting, "
                     "minimalist style, dark navy and gold primary tones, high-end commercial aesthetic, no text or overlays."
                 )
+                quality_val = "auto" if "gpt-image" in OPENAI_IMAGE_MODEL.lower() else "standard"
                 response = client.images.generate(
                     model=OPENAI_IMAGE_MODEL,
                     prompt=full_prompt,
                     size="1024x1792", # DALL-E 3 vertical aspect ratio
-                    quality="standard",
+                    quality=quality_val,
                     n=1,
                 )
                 image_url = response.data[0].url
